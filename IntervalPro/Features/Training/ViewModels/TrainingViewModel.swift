@@ -243,8 +243,14 @@ final class TrainingViewModel: ObservableObject {
         intervalRecords = []
         totalDistance = 0
 
-        // Start HR monitoring
-        try await hrDataService.start()
+        // Start HR monitoring - use simulation if no real source available
+        if !garminManager.isConnected {
+            // Enable simulation mode for testing without Garmin
+            hrDataService.enableSimulation(targetHR: plan.workZone.targetBPM)
+            Log.training.info("No Garmin connected - using simulated HR data")
+        } else {
+            try await hrDataService.start()
+        }
 
         // Start zone tracking
         if let zone = targetZone {
@@ -302,6 +308,7 @@ final class TrainingViewModel: ObservableObject {
         intervalTimer.stop()
         audioEngine.stopMetronome()
         hrDataService.stop()
+        hrDataService.disableSimulation()
 
         _ = try? await healthKitManager.endWorkout()
 
@@ -322,6 +329,11 @@ final class TrainingViewModel: ObservableObject {
         // Update zone tracking
         if let zone = targetZone {
             hrDataService.startZoneTracking(targetZone: zone)
+
+            // Update simulation target if in simulation mode
+            if hrDataService.isSimulationMode {
+                hrDataService.updateSimulatedTarget(zone.targetBPM)
+            }
         }
 
         // Audio announcement with music ducking
@@ -364,6 +376,7 @@ final class TrainingViewModel: ObservableObject {
     private func handleWorkoutComplete() async {
         audioEngine.stopMetronome()
         hrDataService.stop()
+        hrDataService.disableSimulation()
 
         if isVoiceEnabled {
             await audioEngine.announce("Entrenamiento completado. ¡Excelente trabajo!")

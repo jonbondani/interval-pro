@@ -4,10 +4,7 @@ import SwiftUI
 /// Shows real-time HR, timer, phase, and metrics
 struct TrainingView: View {
     @StateObject private var viewModel: TrainingViewModel
-    @StateObject private var musicController = UnifiedMusicController.shared
     @Environment(\.dismiss) private var dismiss
-
-    @State private var showMusicPlayer = false
 
     let plan: TrainingPlan
 
@@ -35,21 +32,10 @@ struct TrainingView: View {
                         heartRateDisplay
                         metricsRow
                         seriesProgress
-                        bestSessionComparison
                     }
                     .padding(.horizontal)
 
                     Spacer()
-
-                    // Mini music player (when connected)
-                    if musicController.isConnected || musicController.nowPlaying != nil {
-                        MiniPlayerView(musicController: musicController)
-                            .padding(.horizontal)
-                            .padding(.bottom, DesignTokens.Spacing.sm)
-                            .onTapGesture {
-                                showMusicPlayer = true
-                            }
-                    }
 
                     // Control buttons
                     controlButtons
@@ -61,16 +47,6 @@ struct TrainingView: View {
         .navigationBarHidden(true)
         .task {
             await viewModel.configure(with: plan)
-            await musicController.detectActiveService()
-        }
-        .onChange(of: viewModel.timerState) { _, newState in
-            if newState == .stopped && viewModel.currentPhase == .complete {
-                // Navigate to summary
-            }
-        }
-        .sheet(isPresented: $showMusicPlayer) {
-            FullPlayerSheet(musicController: musicController)
-                .presentationDetents([.medium, .large])
         }
     }
 
@@ -227,17 +203,19 @@ struct TrainingView: View {
             Text("Serie \(viewModel.currentSeries) de \(viewModel.totalSeries)")
                 .font(.headline)
 
-            HStack(spacing: DesignTokens.Spacing.xs) {
-                ForEach(1...viewModel.totalSeries, id: \.self) { series in
-                    Circle()
-                        .fill(seriesColor(for: series))
-                        .frame(width: 12, height: 12)
-                        .overlay {
-                            if series == viewModel.currentSeries {
-                                Circle()
-                                    .stroke(Color.primary, lineWidth: 2)
+            if viewModel.totalSeries > 0 {
+                HStack(spacing: DesignTokens.Spacing.xs) {
+                    ForEach(1...viewModel.totalSeries, id: \.self) { series in
+                        Circle()
+                            .fill(seriesColor(for: series))
+                            .frame(width: 12, height: 12)
+                            .overlay {
+                                if series == viewModel.currentSeries {
+                                    Circle()
+                                        .stroke(Color.primary, lineWidth: 2)
+                                }
                             }
-                        }
+                    }
                 }
             }
         }
@@ -253,28 +231,6 @@ struct TrainingView: View {
         }
     }
 
-    // MARK: - Best Session Comparison
-    @ViewBuilder
-    private var bestSessionComparison: some View {
-        if viewModel.bestSession != nil {
-            HStack {
-                Image(systemName: viewModel.isAheadOfBest ? "arrow.up.circle.fill" : "arrow.down.circle.fill")
-                    .foregroundStyle(viewModel.isAheadOfBest ? .green : .red)
-
-                Text(viewModel.isAheadOfBest ? "Adelante" : "Atrás")
-                    .font(.subheadline.weight(.medium))
-
-                Text("vs mejor sesión")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            .padding(.horizontal, DesignTokens.Spacing.md)
-            .padding(.vertical, DesignTokens.Spacing.sm)
-            .background(Color(.secondarySystemBackground))
-            .clipShape(Capsule())
-        }
-    }
-
     // MARK: - Control Buttons
     private var controlButtons: some View {
         HStack(spacing: DesignTokens.Spacing.xl) {
@@ -282,7 +238,7 @@ struct TrainingView: View {
                 // Start button
                 Button {
                     Task {
-                        try await viewModel.startWorkout()
+                        try? await viewModel.startWorkout()
                     }
                 } label: {
                     Label("Iniciar", systemImage: "play.fill")
@@ -299,7 +255,7 @@ struct TrainingView: View {
                         if viewModel.timerState == .running {
                             await viewModel.pauseWorkout()
                         } else {
-                            try await viewModel.resumeWorkout()
+                            try? await viewModel.resumeWorkout()
                         }
                     }
                 } label: {
@@ -373,7 +329,7 @@ struct HRZoneBar: View {
         let minHR: CGFloat = 100
         let maxHR: CGFloat = 200
         let normalized = (CGFloat(hr) - minHR) / (maxHR - minHR)
-        return normalized * width
+        return max(0, min(width, normalized * width))
     }
 }
 

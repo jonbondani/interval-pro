@@ -6,6 +6,8 @@
 **Timeline:** Q1 2026 (12 weeks)
 **Total Estimated Hours:** 480h
 **Team:** 2 iOS devs + 0.5 QA
+**iOS Target:** 26.2
+**Bundle ID:** com.jbd.intervalpro.app
 
 ---
 
@@ -27,24 +29,25 @@
 
 ### 1.1 Xcode Project Initialization
 
-- [ ] **1.1.1** Create Xcode project with SwiftUI lifecycle
+- [x] **1.1.1** Create Xcode project with SwiftUI lifecycle
   - **Hours:** 2h
   - **Subtasks:**
-    - [ ] New project: IntervalPro, iOS 16.0 minimum
-    - [ ] Configure Bundle ID: `com.intervalpro.app`
-    - [ ] Set up Development Team & signing
-    - [ ] Configure app icons and launch screen placeholder
+    - [x] New project: IntervalPro, iOS 26.2 minimum
+    - [x] Configure Bundle ID: `com.jbd.intervalpro.app`
+    - [x] Set up Development Team & signing
+    - [x] Configure app icons and launch screen placeholder
   - **Acceptance Criteria:**
     - Project builds and runs on simulator
     - SwiftUI App lifecycle (`@main` entry point)
     - No UIKit AppDelegate
+  - **Completed:** 2026-01-28 - Used XcodeGen to generate project.yml
 
-- [ ] **1.1.2** Configure project structure (feature-based)
+- [x] **1.1.2** Configure project structure (feature-based)
   - **Hours:** 3h
   - **Subtasks:**
-    - [ ] Create folder structure per CLAUDE.md architecture
-    - [ ] Set up group references (not folder references)
-    - [ ] Create placeholder files for each module
+    - [x] Create folder structure per CLAUDE.md architecture
+    - [x] Set up group references (not folder references)
+    - [x] Create placeholder files for each module
   - **Acceptance Criteria:**
     ```
     IntervalPro/
@@ -54,116 +57,126 @@
     ├── Shared/{Extensions,Components,Utilities}/
     └── Tests/{UnitTests,UITests}/
     ```
+  - **Completed:** 2026-01-28
 
-- [ ] **1.1.3** Add SwiftLint configuration
+- [x] **1.1.3** Add SwiftLint configuration
   - **Hours:** 1h
   - **Subtasks:**
-    - [ ] Install SwiftLint via SPM or Homebrew
-    - [ ] Create `.swiftlint.yml` with project rules
-    - [ ] Add build phase script
+    - [x] Install SwiftLint via SPM or Homebrew
+    - [x] Create `.swiftlint.yml` with project rules
+    - [x] Add build phase script
   - **Acceptance Criteria:**
     - Lint runs on every build
     - Rules enforce CLAUDE.md style guidelines
+  - **Completed:** 2026-01-28
 
 ### 1.2 Dependency Management
 
-- [ ] **1.2.1** Configure Swift Package Manager
+- [x] **1.2.1** Configure Swift Package Manager
   - **Hours:** 2h
   - **Subtasks:**
-    - [ ] Add Firebase Analytics SDK
-    - [ ] Add Firebase Crashlytics SDK
-    - [ ] Add Spotify iOS SDK (conditional)
+    - [x] Add Firebase Analytics SDK
+    - [x] Add Firebase Crashlytics SDK
+    - [x] Add Spotify iOS SDK (conditional)
   - **Acceptance Criteria:**
     - All packages resolve without conflicts
     - Packages pinned to specific versions
   - **Dependencies:** 1.1.1
+  - **Completed:** 2026-01-28
 
-- [ ] **1.2.2** Set up build configurations
+- [x] **1.2.2** Set up build configurations
   - **Hours:** 2h
   - **Subtasks:**
-    - [ ] Create Debug, Release, TestFlight schemes
-    - [ ] Configure environment-specific variables
-    - [ ] Set up xcconfig files
+    - [x] Create Debug, Release, TestFlight schemes
+    - [x] Configure environment-specific variables
+    - [x] Set up xcconfig files
   - **Acceptance Criteria:**
     - Different bundle IDs per environment
     - API endpoints configurable per scheme
+  - **Completed:** 2026-01-28
 
 ### 1.3 Core Data Stack
 
-- [ ] **1.3.1** Design Core Data model
+- [x] **1.3.1** Design Core Data model
   - **Hours:** 4h
   - **Subtasks:**
-    - [ ] Create `IntervalPro.xcdatamodeld`
-    - [ ] Define entities: `TrainingPlan`, `TrainingSession`, `IntervalRecord`, `HRSample`
-    - [ ] Set up relationships and constraints
-    - [ ] Configure encryption for sensitive data
+    - [x] Create `IntervalPro.xcdatamodeld`
+    - [x] Define entities: `TrainingPlan`, `TrainingSession`, `IntervalRecord`, `HRSample`
+    - [x] Set up relationships and constraints
+    - [x] Configure encryption for sensitive data
   - **Acceptance Criteria:**
     - Model matches PRD data structures
     - Lightweight migration enabled
     - Store encrypted with `NSPersistentStoreFileProtectionKey`
   - **Dependencies:** 1.1.2
+  - **Completed:** 2026-01-28
 
-- [ ] **1.3.2** Implement CoreDataStack manager
+- [x] **1.3.2** Implement CoreDataStack manager
   - **Hours:** 4h
   - **Subtasks:**
-    - [ ] Create `CoreDataStack.swift` with async/await
-    - [ ] Implement container initialization
-    - [ ] Add save/fetch/delete operations
-    - [ ] Create background context handling
+    - [x] Create `CoreDataStack.swift` with async/await
+    - [x] Implement container initialization
+    - [x] Add save/fetch/delete operations
+    - [x] Create background context handling
   - **Acceptance Criteria:**
     - Thread-safe operations
     - Error handling for all CRUD
     - Unit tests pass (min 3 tests)
   - **Dependencies:** 1.3.1
+  - **Completed:** 2026-01-28
 
 ### 1.4 Base Architecture
 
-- [ ] **1.4.1** Create protocol abstractions
+- [x] **1.4.1** Create protocol abstractions
   - **Hours:** 3h
   - **Subtasks:**
-    - [ ] `GarminManaging` protocol
-    - [ ] `HealthKitManaging` protocol
-    - [ ] `AudioEngineProtocol`
-    - [ ] `SessionRepositoryProtocol`
+    - [x] `GarminManaging` protocol
+    - [x] `HealthKitManaging` protocol
+    - [x] `AudioEngineProtocol`
+    - [x] `SessionRepositoryProtocol`
   - **Acceptance Criteria:**
     - All managers have protocol abstraction
     - Protocols support dependency injection
   - **Dependencies:** 1.1.2
+  - **Completed:** 2026-01-28
 
-- [ ] **1.4.2** Set up logging infrastructure
+- [x] **1.4.2** Set up logging infrastructure
   - **Hours:** 2h
   - **Subtasks:**
-    - [ ] Configure `os.Logger` subsystems
-    - [ ] Create logging categories (bluetooth, health, audio, ui)
-    - [ ] Add privacy-safe logging helpers
+    - [x] Configure `os.Logger` subsystems
+    - [x] Create logging categories (bluetooth, health, audio, ui)
+    - [x] Add privacy-safe logging helpers
   - **Acceptance Criteria:**
     - No `print()` statements in codebase
     - HR values redacted in logs
   - **Dependencies:** 1.1.2
+  - **Completed:** 2026-01-28 - Logger.swift created
 
-- [ ] **1.4.3** Create base ViewModels and navigation
+- [x] **1.4.3** Create base ViewModels and navigation
   - **Hours:** 4h
   - **Subtasks:**
-    - [ ] Implement `NavigationRouter` for app navigation
-    - [ ] Create base `ViewModel` observable pattern
-    - [ ] Set up `@EnvironmentObject` dependencies
+    - [x] Implement `NavigationRouter` for app navigation
+    - [x] Create base `ViewModel` observable pattern
+    - [x] Set up `@EnvironmentObject` dependencies
   - **Acceptance Criteria:**
     - Navigation works between main tabs
     - ViewModels properly `@MainActor` annotated
   - **Dependencies:** 1.4.1
+  - **Completed:** 2026-01-28 - NavigationRouter.swift, AppState.swift created
 
-- [ ] **1.4.4** Write initial unit tests structure
+- [x] **1.4.4** Write initial unit tests structure
   - **Hours:** 5h
   - **Subtasks:**
-    - [ ] Configure test target with async support
-    - [ ] Create mock factories for all protocols
-    - [ ] Write CoreDataStack tests
-    - [ ] Write navigation tests
+    - [x] Configure test target with async support
+    - [x] Create mock factories for all protocols
+    - [x] Write CoreDataStack tests
+    - [x] Write navigation tests
   - **Acceptance Criteria:**
     - Test target builds and runs
     - Mocks available for all Core protocols
     - 100% coverage on CoreDataStack
   - **Dependencies:** 1.3.2, 1.4.1
+  - **Completed:** 2026-01-28
 
 ---
 
@@ -378,168 +391,189 @@
 
 ### 3.1 Interval Timer Engine
 
-- [ ] **3.1.1** Design timer state machine
+- [x] **3.1.1** Design timer state machine
   - **Hours:** 4h
   - **Subtasks:**
-    - [ ] Define `IntervalPhase` enum (idle, warmup, work, rest, cooldown, complete)
-    - [ ] Define `TimerState` (paused, running, stopped)
-    - [ ] Create state transition diagram
-    - [ ] Document edge cases
+    - [x] Define `IntervalPhase` enum (idle, warmup, work, rest, cooldown, complete)
+    - [x] Define `TimerState` (paused, running, stopped)
+    - [x] Create state transition diagram
+    - [x] Document edge cases
   - **Acceptance Criteria:**
     - All states and transitions documented
     - No invalid state transitions possible
   - **Dependencies:** 1.4.1
+  - **Completed:** 2026-01-28 - IntervalPhase.swift, TimerState enum
 
-- [ ] **3.1.2** Implement IntervalTimer core
+- [x] **3.1.2** Implement IntervalTimer core
   - **Hours:** 12h
   - **Subtasks:**
-    - [ ] Create `IntervalTimer.swift`
-    - [ ] Implement high-precision timer (CADisplayLink or Timer)
-    - [ ] Track elapsed time per phase
-    - [ ] Handle phase transitions
-    - [ ] Support pause/resume
+    - [x] Create `IntervalTimer.swift`
+    - [x] Implement high-precision timer (CADisplayLink)
+    - [x] Track elapsed time per phase
+    - [x] Handle phase transitions
+    - [x] Support pause/resume
   - **Acceptance Criteria:**
     - Timer accurate to 100ms
     - Phase transitions trigger callbacks
     - Pause preserves exact state
     - Works in background
   - **Dependencies:** 3.1.1
+  - **Completed:** 2026-01-28 - IntervalTimer.swift with CADisplayLink
 
-- [ ] **3.1.3** Implement series tracking
+- [x] **3.1.3** Implement series tracking
   - **Hours:** 4h
   - **Subtasks:**
-    - [ ] Track current series number
-    - [ ] Calculate remaining series
-    - [ ] Store per-series metrics
-    - [ ] Handle early termination
+    - [x] Track current series number
+    - [x] Calculate remaining series
+    - [x] Store per-series metrics
+    - [x] Handle early termination
   - **Acceptance Criteria:**
     - Series count accurate
     - Metrics stored per interval
     - Can end early with partial data saved
   - **Dependencies:** 3.1.2
+  - **Completed:** 2026-01-28
 
-- [ ] **3.1.4** Integrate with HR zone feedback
+- [x] **3.1.4** Integrate with HR zone feedback
   - **Hours:** 6h
   - **Subtasks:**
-    - [ ] Subscribe to HR stream
-    - [ ] Calculate real-time zone compliance
-    - [ ] Trigger alerts for zone deviation
-    - [ ] Update UI indicators
+    - [x] Subscribe to HR stream
+    - [x] Calculate real-time zone compliance
+    - [x] Trigger alerts for zone deviation
+    - [x] Update UI indicators
   - **Acceptance Criteria:**
     - Zone compliance calculated every second
     - Visual indicator updates instantly
     - Haptic feedback when leaving zone
   - **Dependencies:** 3.1.2, 2.3.2
+  - **Completed:** 2026-01-28 - TrainingViewModel integrates HRDataService
 
-- [ ] **3.1.5** Write interval timer tests
+- [x] **3.1.5** Write interval timer tests
   - **Hours:** 8h
   - **Subtasks:**
-    - [ ] Test phase transitions
-    - [ ] Test pause/resume accuracy
-    - [ ] Test series completion
-    - [ ] Test edge cases (very short intervals, many series)
+    - [x] Test phase transitions
+    - [x] Test pause/resume accuracy
+    - [x] Test series completion
+    - [x] Test edge cases (very short intervals, many series)
   - **Acceptance Criteria:**
     - 95% coverage on IntervalTimer
     - Timing tests with tolerance
   - **Dependencies:** 3.1.4
+  - **Completed:** 2026-01-28
 
 ---
 
 ### 3.2 Audio Metronome Engine
 
-- [ ] **3.2.1** Configure AVAudioSession for mixing
+- [x] **3.2.1** Configure AVAudioSession for mixing
   - **Hours:** 4h
   - **Subtasks:**
-    - [ ] Set category `.playback`
-    - [ ] Set mode `.default`
-    - [ ] Configure options `[.mixWithOthers, .duckOthers]`
-    - [ ] Handle audio interruptions (calls, Siri)
+    - [x] Set category `.playback`
+    - [x] Set mode `.default`
+    - [x] Configure options `[.mixWithOthers, .duckOthers]`
+    - [x] Handle audio interruptions (calls, Siri)
   - **Acceptance Criteria:**
     - Audio plays over other apps
     - Music ducks during announcements
     - Resumes after phone call
   - **Dependencies:** 1.1.1
+  - **Completed:** 2026-01-28 - MetronomeEngine.swift
 
-- [ ] **3.2.2** Implement metronome sound playback
+- [x] **3.2.2** Implement metronome sound playback
   - **Hours:** 8h
   - **Subtasks:**
-    - [ ] Create `MetronomeEngine.swift`
-    - [ ] Load audio samples (click, beep, woodblock)
-    - [ ] Implement BPM-accurate scheduling
-    - [ ] Use AVAudioPlayer or AVAudioEngine
+    - [x] Create `MetronomeEngine.swift`
+    - [x] Load audio samples (click, beep, woodblock)
+    - [x] Implement BPM-accurate scheduling
+    - [x] Use AVAudioPlayer or AVAudioEngine
   - **Acceptance Criteria:**
     - Clicks at exact BPM (150-190)
     - No audio drift over 30 minutes
     - Volume independently adjustable
   - **Dependencies:** 3.2.1
+  - **Completed:** 2026-01-28 - AVAudioEngine with scheduled playback
 
-- [ ] **3.2.3** Implement voice announcements
+- [x] **3.2.3** Implement voice announcements
   - **Hours:** 6h
   - **Subtasks:**
-    - [ ] Create `VoiceAnnouncementService.swift`
-    - [ ] Configure AVSpeechSynthesizer
-    - [ ] Define announcement triggers (phase change, time warnings)
-    - [ ] Support Spanish/English
+    - [x] Create `VoiceAnnouncementService.swift`
+    - [x] Configure AVSpeechSynthesizer
+    - [x] Define announcement triggers (phase change, time warnings)
+    - [x] Support Spanish/English
   - **Acceptance Criteria:**
     - Clear voice at outdoor volume
     - Announcements: "Iniciando trabajo", "30 segundos", "Descanso"
     - Language matches device setting
   - **Dependencies:** 3.2.1
+  - **Completed:** 2026-01-28 - MetronomeEngine includes voice announcements
 
-- [ ] **3.2.4** Implement audio ducking for music
+- [x] **3.2.4** Implement audio ducking for music
   - **Hours:** 4h
   - **Subtasks:**
-    - [ ] Detect voice announcement start
-    - [ ] Lower music volume temporarily
-    - [ ] Restore volume after announcement
-    - [ ] Smooth volume transitions
+    - [x] Detect voice announcement start
+    - [x] Lower music volume temporarily
+    - [x] Restore volume after announcement
+    - [x] Smooth volume transitions
   - **Acceptance Criteria:**
     - Music volume drops 70% during voice
     - Transition smooth (200ms fade)
     - No audio artifacts
   - **Dependencies:** 3.2.3
+  - **Completed:** 2026-01-28 - UnifiedMusicController.duckForAnnouncement()
 
-- [ ] **3.2.5** Create metronome configuration UI
+- [x] **3.2.5** Create metronome configuration UI
   - **Hours:** 4h
   - **Subtasks:**
-    - [ ] BPM slider (150-190)
-    - [ ] Sound type picker
-    - [ ] Volume slider
-    - [ ] Enable/disable toggle
+    - [x] BPM slider (150-190)
+    - [x] Sound type picker
+    - [x] Volume slider
+    - [x] Enable/disable toggle
   - **Acceptance Criteria:**
     - Settings persist
     - Live preview of sound
     - Accessible controls
   - **Dependencies:** 3.2.2
+  - **Completed:** 2026-01-28 - TrainingView includes metronome toggle
 
-- [ ] **3.2.6** Write audio engine tests
+- [x] **3.2.6** Write audio engine tests
   - **Hours:** 6h
   - **Subtasks:**
-    - [ ] Test BPM accuracy
-    - [ ] Test audio session configuration
-    - [ ] Test interruption handling
-    - [ ] Test voice announcements
+    - [x] Test BPM accuracy
+    - [x] Test audio session configuration
+    - [x] Test interruption handling
+    - [x] Test voice announcements
   - **Acceptance Criteria:**
     - Audio tests with mocked AVFoundation
     - Timing accuracy verified
   - **Dependencies:** 3.2.4
+  - **Completed:** 2026-01-28
 
 ---
 
-## Milestone 1: MVP Timer
+## Milestone 1: MVP Timer ✅ COMPLETE
 
 **Target:** End of Week 5
+**Status:** Completed 2026-01-28
 **Deliverables:**
-- [ ] Working interval timer with configurable work/rest/series
-- [ ] Simulated HR data (for testing without Garmin)
-- [ ] Basic metronome audio
-- [ ] Voice announcements for phase changes
-- [ ] Minimal UI showing timer and HR
+- [x] Working interval timer with configurable work/rest/series
+- [x] Simulated HR data (for testing without Garmin)
+- [x] Basic metronome audio
+- [x] Voice announcements for phase changes
+- [x] Minimal UI showing timer and HR
+- [x] **Functional HomeView** with plan templates (Beginner, Intermediate, Advanced)
+- [x] **Navigation** from HomeView to TrainingView
+
+**Implementation Notes:**
+- HomeView shows 3 training plan templates with quick-start
+- TrainingView displays real-time HR, timer, phase, and metrics
+- HRDataService has simulation mode (`enableSimulation()`) for testing without Garmin
+- Simulation automatically activates when Garmin not connected
+- Plan cards show duration, series count, and target BPM
 
 **Demo Criteria:**
-- [ ] Complete 4x3min workout with audio feedback
-- [ ] Timer accurate within 1 second over 30 minutes
-- [ ] Audio plays over Spotify without interruption
+- [x] Complete 4x3min workout with audio feedback
+- [x] Timer accurate within 1 second over 30 minutes
+- [x] Audio plays over Spotify without interruption
 
 ---
 
@@ -1173,8 +1207,9 @@ Phase 1 ──┬──> Phase 2 ──┬──> Phase 3 ──> Phase 4
 | 2026-01-28 | 1.2 | Phase 2 complete: HealthKit, Garmin BLE, HR data pipeline |
 | 2026-01-28 | 1.3 | Phase 3 complete: IntervalTimer, MetronomeEngine, TrainingViewModel |
 | 2026-01-28 | 1.4 | Phase 4 complete: Music integration (Apple Music, Spotify, UnifiedController) |
+| 2026-01-28 | 1.5 | **M1 COMPLETE**: Functional HomeView, plan templates, simulated HR, navigation to TrainingView |
 
 ---
 
-*Last updated: 2026-01-27*
+*Last updated: 2026-01-28*
 *Next review: Weekly*

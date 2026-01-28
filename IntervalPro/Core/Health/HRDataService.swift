@@ -36,6 +36,11 @@ final class HRDataService: ObservableObject {
     private let outlierFilterWindow = 5
     private var recentHRValues: [Int] = []
 
+    // MARK: - Simulation Mode (for testing without Garmin)
+    @Published var isSimulationMode: Bool = false
+    private var simulationTask: Task<Void, Never>?
+    private var simulatedTargetHR: Int = 140
+
     // MARK: - Subjects
     private let heartRateSubject = PassthroughSubject<HRSample, Never>()
 
@@ -301,6 +306,74 @@ final class HRDataService: ObservableObject {
         currentCadence = 0
         timeInZone = 0
         recentHRValues.removeAll()
+    }
+
+    // MARK: - Simulation Mode
+
+    /// Enable simulation mode for testing without real HR devices
+    func enableSimulation(targetHR: Int = 150) {
+        isSimulationMode = true
+        simulatedTargetHR = targetHR
+        currentSource = .simulated
+        isReceivingData = true
+
+        simulationTask?.cancel()
+        simulationTask = Task { @MainActor in
+            Log.health.info("HR Simulation started with target: \(targetHR) BPM")
+
+            var currentSimulatedHR = 80  // Start from resting HR
+
+            while !Task.isCancelled && isSimulationMode {
+                // Simulate gradual HR changes toward target with some variance
+                let diff = simulatedTargetHR - currentSimulatedHR
+                let change: Int
+                if abs(diff) > 10 {
+                    change = diff > 0 ? Int.random(in: 2...5) : Int.random(in: -5 ... -2)
+                } else {
+                    change = Int.random(in: -3...3)
+                }
+                currentSimulatedHR = max(60, min(200, currentSimulatedHR + change))
+
+                // Process the simulated HR
+                processSimulatedHeartRate(currentSimulatedHR)
+
+                // Update every 1 second
+                try? await Task.sleep(for: .seconds(1))
+            }
+
+            Log.health.info("HR Simulation stopped")
+        }
+    }
+
+    /// Update the target HR for simulation (e.g., when phase changes)
+    func updateSimulatedTarget(_ targetHR: Int) {
+        simulatedTargetHR = targetHR
+        Log.health.debug("Simulation target updated to: \(targetHR) BPM")
+    }
+
+    /// Disable simulation mode
+    func disableSimulation() {
+        isSimulationMode = false
+        simulationTask?.cancel()
+        simulationTask = nil
+    }
+
+    private func processSimulatedHeartRate(_ bpm: Int) {
+        currentHeartRate = bpm
+        isReceivingData = true
+
+        // Update zone status if tracking
+        if let zone = targetZone {
+            currentZoneStatus = zone.status(for: bpm)
+        }
+
+        // Publish sample
+        let sample = HRSample(
+            timestamp: Date(),
+            bpm: bpm,
+            source: .simulated
+        )
+        heartRateSubject.send(sample)
     }
 }
 
