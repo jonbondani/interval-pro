@@ -1,0 +1,899 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 63;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		01398D5A63E6986CCCB76140 /* MusicControllerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 249640C552553E78352C4A8C /* MusicControllerTests.swift */; };
+		044E450E93781BA4CAD558DB /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 3793BF8338DD94813C54790A /* Assets.xcassets */; };
+		04725C6D45291F30945AC65C /* TrainingSessionEntity.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7C35E66F17A4C932BD13B5E /* TrainingSessionEntity.swift */; };
+		0BF1110370FE36A77DAEE978 /* DesignTokens.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53B63D7F2DEAFE0FE7B12F36 /* DesignTokens.swift */; };
+		124E20C05758AC4AE5310A3C /* IntervalTimerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 144BCB57090E1299AC9ED17C /* IntervalTimerTests.swift */; };
+		13441EFF8E3F1E72887D4353 /* SessionRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = B19F35FC55245BCDF716DEBF /* SessionRepository.swift */; };
+		17467A4D1640617C85436697 /* TrainingViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59C44C8AC265D15F55B3B4E3 /* TrainingViewModelTests.swift */; };
+		1BAA91D6A916D90BBB0F5E89 /* MetronomeEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9A0830FF31C677E7EDD4794 /* MetronomeEngine.swift */; };
+		1D41CE93E0B59194D2838DDF /* CoreDataStack.swift in Sources */ = {isa = PBXBuildFile; fileRef = 024660C9E5F49D9EC89F394D /* CoreDataStack.swift */; };
+		222A93DD5E371688C89FB309 /* MetronomeEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BA87708B3051850BA7E5C6D /* MetronomeEngineTests.swift */; };
+		22CF5C83010F0C878BB49C05 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3DB33813D30141D0B823E0FD /* ContentView.swift */; };
+		262E497D20C4B74914B15581 /* GarminManaging.swift in Sources */ = {isa = PBXBuildFile; fileRef = 304136ED54EAE913E5D94B94 /* GarminManaging.swift */; };
+		3249EB52F80A5F5AFAF4A8BB /* TrainingPlanEntity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C6EA16673B26CDD4A1B4A40 /* TrainingPlanEntity.swift */; };
+		3470999E676121CA4DDD9B6B /* HealthKitManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A163BA993DFDDECE416BC25D /* HealthKitManager.swift */; };
+		35660C3256DC50D81AE8BBA5 /* PlanRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2755FF000ECA206B9BFE87A5 /* PlanRepository.swift */; };
+		372B6D6CBF41EF330B0A6D15 /* Logger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4104BCE247D8EBBC7182EDE6 /* Logger.swift */; };
+		4025EEB471EB49460FA453FD /* HRDataService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E544BA9CE546C0A5F81875F /* HRDataService.swift */; };
+		5654AAB3E97B1AC32AFE2F5A /* IntervalTimer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 510954188DCCA13FBD7018BD /* IntervalTimer.swift */; };
+		5EC624A3B280DBD9772996A0 /* UnifiedMusicController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A361CE0CB38827B877DA3260 /* UnifiedMusicController.swift */; };
+		6AC0A9EE8A6BC2E42D826666 /* TrainingSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4731CE746AA497CC5E744D36 /* TrainingSession.swift */; };
+		7D0A465F51D564B7E543343E /* HealthKitManaging.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E395BEB65C9738300D85159 /* HealthKitManaging.swift */; };
+		8016FE0E6CBB83A5D90D15B9 /* HeartRateZone.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20EB030802C151727590CDDE /* HeartRateZone.swift */; };
+		8AAD510F94F52AE49480E20E /* HRDataServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7A690A067B433D35DD8C235 /* HRDataServiceTests.swift */; };
+		8B7B339F9A06CB8E48BAEAC0 /* TrainingPlan.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D14E145BE1176A311ED71A9 /* TrainingPlan.swift */; };
+		93F88A28BC3D7FEF50601E4C /* GarminManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9778DEC59D58BAD7B91FAA3 /* GarminManagerTests.swift */; };
+		991509EB62AC75092EFA96D5 /* TrainingViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = E84DA2658ED0D67641D7DDFE /* TrainingViewModel.swift */; };
+		9B53BE5EDADB7636BF263A0E /* GarminManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6917FD6FB0A07FC316755B9C /* GarminManager.swift */; };
+		9E4F484D5220DEA610389DDB /* NavigationRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30004534F86BB3A1F318488E /* NavigationRouter.swift */; };
+		A2A31391CF6A80FDD8AF1BEA /* SpotifyController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20885D7FA796B0BE6A4D137F /* SpotifyController.swift */; };
+		AD1A96C3E57DCFAF527E561B /* HealthKitPermissionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C93E6D56D8208CC9497EF06D /* HealthKitPermissionView.swift */; };
+		C513EA696C39004DAC15823D /* TrainingPlanTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FCF906936E3C03C5E1F12C3 /* TrainingPlanTests.swift */; };
+		CCBB05216BE5F2ADF950770B /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 107490037506F1E374E66E45 /* AppState.swift */; };
+		D756ADA306A26AE0BE8B4D1B /* MiniPlayerViewTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5AE639A9C67394EF57AFF84 /* MiniPlayerViewTests.swift */; };
+		D8B879A26868B7CC451548F2 /* TimeInterval+Formatting.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3BC6F1079399CA19E2DDA2D2 /* TimeInterval+Formatting.swift */; };
+		D9A96B10197DC014EB10776C /* MiniPlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 467EB985AE868868A2547839 /* MiniPlayerView.swift */; };
+		DD19D008FA0880BCEEF56BAB /* IntervalProApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = EAD96F2C332CA6CBFDF57A85 /* IntervalProApp.swift */; };
+		DD4C17B12549EAE062A719BB /* AudioEngineProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F3029572DA77726B19D59DA /* AudioEngineProtocol.swift */; };
+		E4F96E674C6E1622A6C4F115 /* HealthKitManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F97A12E9CD1CA59B90C0A4B7 /* HealthKitManagerTests.swift */; };
+		E6D6E107CA9FA10B67EAC321 /* MusicControllerProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2362D681C8E09F2E1CA53A6B /* MusicControllerProtocol.swift */; };
+		E8FC543126AD210E5631BE22 /* TrainingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC695D4FBC5895802B813ACB /* TrainingView.swift */; };
+		EDE3164E6E16603B6C46F766 /* GarminPairingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEC6C1A2143CC0FD73A5F635 /* GarminPairingView.swift */; };
+		F67295C99ABDBF772E9D318E /* AppleMusicController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C7DE3735CBD222A8728C4FB /* AppleMusicController.swift */; };
+		F68A72F53F210DAF29133593 /* HeartRateZoneTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF6368C74FCAADA72956830B /* HeartRateZoneTests.swift */; };
+		FA4A1E1E6117B79A5F47CEA7 /* IntervalPhase.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D339D1298DF192A08A3F335 /* IntervalPhase.swift */; };
+		FA5CEBAD52D5267BC2C406A6 /* SessionRepositoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34EBF75ECD44EB7FB28461A4 /* SessionRepositoryTests.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		6E0B979541CB262AA66F725C /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = D0F765E32F1FF9BB00EAFAFE /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 1E64544C0A165CA2F63403F0;
+			remoteInfo = IntervalPro;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		024660C9E5F49D9EC89F394D /* CoreDataStack.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreDataStack.swift; sourceTree = "<group>"; };
+		0C7DE3735CBD222A8728C4FB /* AppleMusicController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleMusicController.swift; sourceTree = "<group>"; };
+		0FCF906936E3C03C5E1F12C3 /* TrainingPlanTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingPlanTests.swift; sourceTree = "<group>"; };
+		107490037506F1E374E66E45 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
+		144BCB57090E1299AC9ED17C /* IntervalTimerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntervalTimerTests.swift; sourceTree = "<group>"; };
+		1C6EA16673B26CDD4A1B4A40 /* TrainingPlanEntity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingPlanEntity.swift; sourceTree = "<group>"; };
+		1D14E145BE1176A311ED71A9 /* TrainingPlan.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingPlan.swift; sourceTree = "<group>"; };
+		20885D7FA796B0BE6A4D137F /* SpotifyController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotifyController.swift; sourceTree = "<group>"; };
+		20EB030802C151727590CDDE /* HeartRateZone.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeartRateZone.swift; sourceTree = "<group>"; };
+		2362D681C8E09F2E1CA53A6B /* MusicControllerProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MusicControllerProtocol.swift; sourceTree = "<group>"; };
+		249640C552553E78352C4A8C /* MusicControllerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MusicControllerTests.swift; sourceTree = "<group>"; };
+		2755FF000ECA206B9BFE87A5 /* PlanRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanRepository.swift; sourceTree = "<group>"; };
+		30004534F86BB3A1F318488E /* NavigationRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavigationRouter.swift; sourceTree = "<group>"; };
+		304136ED54EAE913E5D94B94 /* GarminManaging.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GarminManaging.swift; sourceTree = "<group>"; };
+		34EBF75ECD44EB7FB28461A4 /* SessionRepositoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionRepositoryTests.swift; sourceTree = "<group>"; };
+		3793BF8338DD94813C54790A /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		3BC6F1079399CA19E2DDA2D2 /* TimeInterval+Formatting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "TimeInterval+Formatting.swift"; sourceTree = "<group>"; };
+		3DB33813D30141D0B823E0FD /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		3E395BEB65C9738300D85159 /* HealthKitManaging.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitManaging.swift; sourceTree = "<group>"; };
+		3F3029572DA77726B19D59DA /* AudioEngineProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioEngineProtocol.swift; sourceTree = "<group>"; };
+		4104BCE247D8EBBC7182EDE6 /* Logger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Logger.swift; sourceTree = "<group>"; };
+		467EB985AE868868A2547839 /* MiniPlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MiniPlayerView.swift; sourceTree = "<group>"; };
+		4731CE746AA497CC5E744D36 /* TrainingSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingSession.swift; sourceTree = "<group>"; };
+		510954188DCCA13FBD7018BD /* IntervalTimer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntervalTimer.swift; sourceTree = "<group>"; };
+		53B63D7F2DEAFE0FE7B12F36 /* DesignTokens.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignTokens.swift; sourceTree = "<group>"; };
+		59C44C8AC265D15F55B3B4E3 /* TrainingViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingViewModelTests.swift; sourceTree = "<group>"; };
+		6917FD6FB0A07FC316755B9C /* GarminManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GarminManager.swift; sourceTree = "<group>"; };
+		6D339D1298DF192A08A3F335 /* IntervalPhase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntervalPhase.swift; sourceTree = "<group>"; };
+		7E544BA9CE546C0A5F81875F /* HRDataService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HRDataService.swift; sourceTree = "<group>"; };
+		87C23E80E751ED36EDEA3C74 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		8BA87708B3051850BA7E5C6D /* MetronomeEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetronomeEngineTests.swift; sourceTree = "<group>"; };
+		8D4DF47E1D5DB59ED3932ACF /* IntervalPro.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = IntervalPro.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A163BA993DFDDECE416BC25D /* HealthKitManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitManager.swift; sourceTree = "<group>"; };
+		A361CE0CB38827B877DA3260 /* UnifiedMusicController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnifiedMusicController.swift; sourceTree = "<group>"; };
+		AF6368C74FCAADA72956830B /* HeartRateZoneTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeartRateZoneTests.swift; sourceTree = "<group>"; };
+		B19F35FC55245BCDF716DEBF /* SessionRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionRepository.swift; sourceTree = "<group>"; };
+		B9778DEC59D58BAD7B91FAA3 /* GarminManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GarminManagerTests.swift; sourceTree = "<group>"; };
+		B9A0830FF31C677E7EDD4794 /* MetronomeEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetronomeEngine.swift; sourceTree = "<group>"; };
+		BEC6C1A2143CC0FD73A5F635 /* GarminPairingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GarminPairingView.swift; sourceTree = "<group>"; };
+		C5AE639A9C67394EF57AFF84 /* MiniPlayerViewTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MiniPlayerViewTests.swift; sourceTree = "<group>"; };
+		C93E6D56D8208CC9497EF06D /* HealthKitPermissionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitPermissionView.swift; sourceTree = "<group>"; };
+		D7A690A067B433D35DD8C235 /* HRDataServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HRDataServiceTests.swift; sourceTree = "<group>"; };
+		D7C35E66F17A4C932BD13B5E /* TrainingSessionEntity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingSessionEntity.swift; sourceTree = "<group>"; };
+		E84DA2658ED0D67641D7DDFE /* TrainingViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingViewModel.swift; sourceTree = "<group>"; };
+		EAD96F2C332CA6CBFDF57A85 /* IntervalProApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntervalProApp.swift; sourceTree = "<group>"; };
+		EC695D4FBC5895802B813ACB /* TrainingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingView.swift; sourceTree = "<group>"; };
+		F97A12E9CD1CA59B90C0A4B7 /* HealthKitManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitManagerTests.swift; sourceTree = "<group>"; };
+		F9CAE8774F13B487213EF209 /* IntervalProTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = IntervalProTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		FD6CD68DC235FFE45481FD83 /* IntervalPro.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = IntervalPro.entitlements; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		10D27A8A492DDC1B4C7A56AD /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				467EB985AE868868A2547839 /* MiniPlayerView.swift */,
+				EC695D4FBC5895802B813ACB /* TrainingView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		15D8F24B4B2745CA57B44541 /* Audio */ = {
+			isa = PBXGroup;
+			children = (
+				0C7DE3735CBD222A8728C4FB /* AppleMusicController.swift */,
+				3F3029572DA77726B19D59DA /* AudioEngineProtocol.swift */,
+				B9A0830FF31C677E7EDD4794 /* MetronomeEngine.swift */,
+				2362D681C8E09F2E1CA53A6B /* MusicControllerProtocol.swift */,
+				20885D7FA796B0BE6A4D137F /* SpotifyController.swift */,
+				A361CE0CB38827B877DA3260 /* UnifiedMusicController.swift */,
+			);
+			path = Audio;
+			sourceTree = "<group>";
+		};
+		228C2FA373ABCE28ABB90B32 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				3793BF8338DD94813C54790A /* Assets.xcassets */,
+				87C23E80E751ED36EDEA3C74 /* Info.plist */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		24A554441C568DCF058D682C /* Shared */ = {
+			isa = PBXGroup;
+			children = (
+				DEDFA59782486ABD440F1CA5 /* Components */,
+				35C5C62BC9477FDD6BED3BFC /* Extensions */,
+				356D86EC8015A7253DE93BDA /* Utilities */,
+			);
+			path = Shared;
+			sourceTree = "<group>";
+		};
+		2AF834BEB315646A12007367 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				20EB030802C151727590CDDE /* HeartRateZone.swift */,
+				6D339D1298DF192A08A3F335 /* IntervalPhase.swift */,
+				1D14E145BE1176A311ED71A9 /* TrainingPlan.swift */,
+				4731CE746AA497CC5E744D36 /* TrainingSession.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		2F081350D954F3D2BC88F01D /* IntervalPro */ = {
+			isa = PBXGroup;
+			children = (
+				7F08DE7C1ABE84715913FB9F /* App */,
+				318731812782B9A616E98502 /* Core */,
+				A43A9F1A3ACA202F3A94795B /* Features */,
+				228C2FA373ABCE28ABB90B32 /* Resources */,
+				24A554441C568DCF058D682C /* Shared */,
+				36C9B91AF95AF5A0AF67A795 /* Tests */,
+				FD6CD68DC235FFE45481FD83 /* IntervalPro.entitlements */,
+			);
+			path = IntervalPro;
+			sourceTree = "<group>";
+		};
+		318731812782B9A616E98502 /* Core */ = {
+			isa = PBXGroup;
+			children = (
+				15D8F24B4B2745CA57B44541 /* Audio */,
+				E421A316EC0B5D3690495AFA /* Bluetooth */,
+				6467B44D82E927B6D623BFA4 /* Health */,
+				40D4E790BCD9CC7A8E8ECF13 /* Persistence */,
+				364625CF5FE1CCB0A455E294 /* Timer */,
+			);
+			path = Core;
+			sourceTree = "<group>";
+		};
+		356D86EC8015A7253DE93BDA /* Utilities */ = {
+			isa = PBXGroup;
+			children = (
+				4104BCE247D8EBBC7182EDE6 /* Logger.swift */,
+			);
+			path = Utilities;
+			sourceTree = "<group>";
+		};
+		35C5C62BC9477FDD6BED3BFC /* Extensions */ = {
+			isa = PBXGroup;
+			children = (
+				3BC6F1079399CA19E2DDA2D2 /* TimeInterval+Formatting.swift */,
+			);
+			path = Extensions;
+			sourceTree = "<group>";
+		};
+		35E962E48C0862376C482DB4 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		364625CF5FE1CCB0A455E294 /* Timer */ = {
+			isa = PBXGroup;
+			children = (
+				510954188DCCA13FBD7018BD /* IntervalTimer.swift */,
+			);
+			path = Timer;
+			sourceTree = "<group>";
+		};
+		36C9B91AF95AF5A0AF67A795 /* Tests */ = {
+			isa = PBXGroup;
+			children = (
+				83666BD120D2BD79482CE1D9 /* UITests */,
+				FB5A7C28B59918D148121123 /* UnitTests */,
+			);
+			path = Tests;
+			sourceTree = "<group>";
+		};
+		40D4E790BCD9CC7A8E8ECF13 /* Persistence */ = {
+			isa = PBXGroup;
+			children = (
+				F0014BB84ECA93F055A28312 /* Entities */,
+				024660C9E5F49D9EC89F394D /* CoreDataStack.swift */,
+				2755FF000ECA206B9BFE87A5 /* PlanRepository.swift */,
+				B19F35FC55245BCDF716DEBF /* SessionRepository.swift */,
+			);
+			path = Persistence;
+			sourceTree = "<group>";
+		};
+		57A5EB5BBD64DED478BFDD6B = {
+			isa = PBXGroup;
+			children = (
+				2F081350D954F3D2BC88F01D /* IntervalPro */,
+				F6B4CF48554FAE2F2A0D71AC /* UnitTests */,
+				644ADCF89E88993CB7C56BE3 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		5FDBAED7ADB244F9BE524210 /* ViewModels */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = ViewModels;
+			sourceTree = "<group>";
+		};
+		644ADCF89E88993CB7C56BE3 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				8D4DF47E1D5DB59ED3932ACF /* IntervalPro.app */,
+				F9CAE8774F13B487213EF209 /* IntervalProTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		6467B44D82E927B6D623BFA4 /* Health */ = {
+			isa = PBXGroup;
+			children = (
+				A163BA993DFDDECE416BC25D /* HealthKitManager.swift */,
+				3E395BEB65C9738300D85159 /* HealthKitManaging.swift */,
+				7E544BA9CE546C0A5F81875F /* HRDataService.swift */,
+			);
+			path = Health;
+			sourceTree = "<group>";
+		};
+		72815156B95FCAA1A1EDFC98 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		7DAA772BA6DA02F326EA040D /* Views */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		7F08DE7C1ABE84715913FB9F /* App */ = {
+			isa = PBXGroup;
+			children = (
+				107490037506F1E374E66E45 /* AppState.swift */,
+				3DB33813D30141D0B823E0FD /* ContentView.swift */,
+				EAD96F2C332CA6CBFDF57A85 /* IntervalProApp.swift */,
+				30004534F86BB3A1F318488E /* NavigationRouter.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		7F2F5D94AE74E8358E796DE6 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				BEC6C1A2143CC0FD73A5F635 /* GarminPairingView.swift */,
+				C93E6D56D8208CC9497EF06D /* HealthKitPermissionView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		83666BD120D2BD79482CE1D9 /* UITests */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = UITests;
+			sourceTree = "<group>";
+		};
+		913B275708707F2DE4444C29 /* Training */ = {
+			isa = PBXGroup;
+			children = (
+				2AF834BEB315646A12007367 /* Models */,
+				D4A6C0EF34843C570FA3B7AE /* ViewModels */,
+				10D27A8A492DDC1B4C7A56AD /* Views */,
+			);
+			path = Training;
+			sourceTree = "<group>";
+		};
+		94BFB2146A7BEDA9602FFA1D /* Plans */ = {
+			isa = PBXGroup;
+			children = (
+				35E962E48C0862376C482DB4 /* Models */,
+				B8082789C9BEC42DA61213E4 /* ViewModels */,
+				7DAA772BA6DA02F326EA040D /* Views */,
+			);
+			path = Plans;
+			sourceTree = "<group>";
+		};
+		9BCCDB5D89DBFF0045ADBF89 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		A43A9F1A3ACA202F3A94795B /* Features */ = {
+			isa = PBXGroup;
+			children = (
+				94BFB2146A7BEDA9602FFA1D /* Plans */,
+				CD78CF14FE1ABF4DAB8AC26A /* Progress */,
+				E2A18699730F8913CE0DBFDD /* Settings */,
+				913B275708707F2DE4444C29 /* Training */,
+			);
+			path = Features;
+			sourceTree = "<group>";
+		};
+		B8082789C9BEC42DA61213E4 /* ViewModels */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = ViewModels;
+			sourceTree = "<group>";
+		};
+		BBCD74AC94829E8254A33151 /* ViewModels */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = ViewModels;
+			sourceTree = "<group>";
+		};
+		BCEDF94E712AF6AE1B874859 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		CD78CF14FE1ABF4DAB8AC26A /* Progress */ = {
+			isa = PBXGroup;
+			children = (
+				9BCCDB5D89DBFF0045ADBF89 /* Models */,
+				BBCD74AC94829E8254A33151 /* ViewModels */,
+				72815156B95FCAA1A1EDFC98 /* Views */,
+			);
+			path = Progress;
+			sourceTree = "<group>";
+		};
+		D4A6C0EF34843C570FA3B7AE /* ViewModels */ = {
+			isa = PBXGroup;
+			children = (
+				E84DA2658ED0D67641D7DDFE /* TrainingViewModel.swift */,
+			);
+			path = ViewModels;
+			sourceTree = "<group>";
+		};
+		DEDFA59782486ABD440F1CA5 /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				53B63D7F2DEAFE0FE7B12F36 /* DesignTokens.swift */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
+		E2A18699730F8913CE0DBFDD /* Settings */ = {
+			isa = PBXGroup;
+			children = (
+				BCEDF94E712AF6AE1B874859 /* Models */,
+				5FDBAED7ADB244F9BE524210 /* ViewModels */,
+				7F2F5D94AE74E8358E796DE6 /* Views */,
+			);
+			path = Settings;
+			sourceTree = "<group>";
+		};
+		E421A316EC0B5D3690495AFA /* Bluetooth */ = {
+			isa = PBXGroup;
+			children = (
+				6917FD6FB0A07FC316755B9C /* GarminManager.swift */,
+				304136ED54EAE913E5D94B94 /* GarminManaging.swift */,
+			);
+			path = Bluetooth;
+			sourceTree = "<group>";
+		};
+		F0014BB84ECA93F055A28312 /* Entities */ = {
+			isa = PBXGroup;
+			children = (
+				1C6EA16673B26CDD4A1B4A40 /* TrainingPlanEntity.swift */,
+				D7C35E66F17A4C932BD13B5E /* TrainingSessionEntity.swift */,
+			);
+			path = Entities;
+			sourceTree = "<group>";
+		};
+		F6B4CF48554FAE2F2A0D71AC /* UnitTests */ = {
+			isa = PBXGroup;
+			children = (
+				B9778DEC59D58BAD7B91FAA3 /* GarminManagerTests.swift */,
+				F97A12E9CD1CA59B90C0A4B7 /* HealthKitManagerTests.swift */,
+				AF6368C74FCAADA72956830B /* HeartRateZoneTests.swift */,
+				D7A690A067B433D35DD8C235 /* HRDataServiceTests.swift */,
+				144BCB57090E1299AC9ED17C /* IntervalTimerTests.swift */,
+				8BA87708B3051850BA7E5C6D /* MetronomeEngineTests.swift */,
+				C5AE639A9C67394EF57AFF84 /* MiniPlayerViewTests.swift */,
+				249640C552553E78352C4A8C /* MusicControllerTests.swift */,
+				34EBF75ECD44EB7FB28461A4 /* SessionRepositoryTests.swift */,
+				0FCF906936E3C03C5E1F12C3 /* TrainingPlanTests.swift */,
+				59C44C8AC265D15F55B3B4E3 /* TrainingViewModelTests.swift */,
+			);
+			name = UnitTests;
+			path = Tests/UnitTests;
+			sourceTree = "<group>";
+		};
+		FB5A7C28B59918D148121123 /* UnitTests */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = UnitTests;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		1E64544C0A165CA2F63403F0 /* IntervalPro */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 8CCBA44E41DF282AD72BDE8F /* Build configuration list for PBXNativeTarget "IntervalPro" */;
+			buildPhases = (
+				3EDB62B5D754BE6808E22FA3 /* SwiftLint */,
+				4C46DED8D4614E5020532418 /* Sources */,
+				7E4EC11250E3ADAE9B456E7C /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = IntervalPro;
+			packageProductDependencies = (
+			);
+			productName = IntervalPro;
+			productReference = 8D4DF47E1D5DB59ED3932ACF /* IntervalPro.app */;
+			productType = "com.apple.product-type.application";
+		};
+		3B982C8B6A2030949CAD2A85 /* IntervalProTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 2D1E068751D4B44167776522 /* Build configuration list for PBXNativeTarget "IntervalProTests" */;
+			buildPhases = (
+				2584BFBE2746170E33EEFA24 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				F05D0118859CD41E4BBC693D /* PBXTargetDependency */,
+			);
+			name = IntervalProTests;
+			packageProductDependencies = (
+			);
+			productName = IntervalProTests;
+			productReference = F9CAE8774F13B487213EF209 /* IntervalProTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		D0F765E32F1FF9BB00EAFAFE /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1500;
+				TargetAttributes = {
+					1E64544C0A165CA2F63403F0 = {
+						ProvisioningStyle = Automatic;
+					};
+					3B982C8B6A2030949CAD2A85 = {
+						DevelopmentTeam = "";
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = 923EE53CF8F5CF0BF6816795 /* Build configuration list for PBXProject "IntervalPro" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 57A5EB5BBD64DED478BFDD6B;
+			minimizedProjectReferenceProxies = 1;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				1E64544C0A165CA2F63403F0 /* IntervalPro */,
+				3B982C8B6A2030949CAD2A85 /* IntervalProTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		7E4EC11250E3ADAE9B456E7C /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				044E450E93781BA4CAD558DB /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		3EDB62B5D754BE6808E22FA3 /* SwiftLint */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = SwiftLint;
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "if which swiftlint >/dev/null; then\n  swiftlint\nelse\n  echo \"warning: SwiftLint not installed, download from https://github.com/realm/SwiftLint\"\nfi\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		2584BFBE2746170E33EEFA24 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				93F88A28BC3D7FEF50601E4C /* GarminManagerTests.swift in Sources */,
+				8AAD510F94F52AE49480E20E /* HRDataServiceTests.swift in Sources */,
+				E4F96E674C6E1622A6C4F115 /* HealthKitManagerTests.swift in Sources */,
+				F68A72F53F210DAF29133593 /* HeartRateZoneTests.swift in Sources */,
+				124E20C05758AC4AE5310A3C /* IntervalTimerTests.swift in Sources */,
+				222A93DD5E371688C89FB309 /* MetronomeEngineTests.swift in Sources */,
+				D756ADA306A26AE0BE8B4D1B /* MiniPlayerViewTests.swift in Sources */,
+				01398D5A63E6986CCCB76140 /* MusicControllerTests.swift in Sources */,
+				FA5CEBAD52D5267BC2C406A6 /* SessionRepositoryTests.swift in Sources */,
+				C513EA696C39004DAC15823D /* TrainingPlanTests.swift in Sources */,
+				17467A4D1640617C85436697 /* TrainingViewModelTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		4C46DED8D4614E5020532418 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				CCBB05216BE5F2ADF950770B /* AppState.swift in Sources */,
+				F67295C99ABDBF772E9D318E /* AppleMusicController.swift in Sources */,
+				DD4C17B12549EAE062A719BB /* AudioEngineProtocol.swift in Sources */,
+				22CF5C83010F0C878BB49C05 /* ContentView.swift in Sources */,
+				1D41CE93E0B59194D2838DDF /* CoreDataStack.swift in Sources */,
+				0BF1110370FE36A77DAEE978 /* DesignTokens.swift in Sources */,
+				9B53BE5EDADB7636BF263A0E /* GarminManager.swift in Sources */,
+				262E497D20C4B74914B15581 /* GarminManaging.swift in Sources */,
+				EDE3164E6E16603B6C46F766 /* GarminPairingView.swift in Sources */,
+				4025EEB471EB49460FA453FD /* HRDataService.swift in Sources */,
+				3470999E676121CA4DDD9B6B /* HealthKitManager.swift in Sources */,
+				7D0A465F51D564B7E543343E /* HealthKitManaging.swift in Sources */,
+				AD1A96C3E57DCFAF527E561B /* HealthKitPermissionView.swift in Sources */,
+				8016FE0E6CBB83A5D90D15B9 /* HeartRateZone.swift in Sources */,
+				FA4A1E1E6117B79A5F47CEA7 /* IntervalPhase.swift in Sources */,
+				DD19D008FA0880BCEEF56BAB /* IntervalProApp.swift in Sources */,
+				5654AAB3E97B1AC32AFE2F5A /* IntervalTimer.swift in Sources */,
+				372B6D6CBF41EF330B0A6D15 /* Logger.swift in Sources */,
+				1BAA91D6A916D90BBB0F5E89 /* MetronomeEngine.swift in Sources */,
+				D9A96B10197DC014EB10776C /* MiniPlayerView.swift in Sources */,
+				E6D6E107CA9FA10B67EAC321 /* MusicControllerProtocol.swift in Sources */,
+				9E4F484D5220DEA610389DDB /* NavigationRouter.swift in Sources */,
+				35660C3256DC50D81AE8BBA5 /* PlanRepository.swift in Sources */,
+				13441EFF8E3F1E72887D4353 /* SessionRepository.swift in Sources */,
+				A2A31391CF6A80FDD8AF1BEA /* SpotifyController.swift in Sources */,
+				D8B879A26868B7CC451548F2 /* TimeInterval+Formatting.swift in Sources */,
+				8B7B339F9A06CB8E48BAEAC0 /* TrainingPlan.swift in Sources */,
+				3249EB52F80A5F5AFAF4A8BB /* TrainingPlanEntity.swift in Sources */,
+				6AC0A9EE8A6BC2E42D826666 /* TrainingSession.swift in Sources */,
+				04725C6D45291F30945AC65C /* TrainingSessionEntity.swift in Sources */,
+				E8FC543126AD210E5631BE22 /* TrainingView.swift in Sources */,
+				991509EB62AC75092EFA96D5 /* TrainingViewModel.swift in Sources */,
+				5EC624A3B280DBD9772996A0 /* UnifiedMusicController.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		F05D0118859CD41E4BBC693D /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 1E64544C0A165CA2F63403F0 /* IntervalPro */;
+			targetProxy = 6E0B979541CB262AA66F725C /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		126F3CD502FD624B8A142ADE /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = IntervalPro/IntervalPro.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				DEVELOPMENT_TEAM = SMU9256WVS;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = IntervalPro/Resources/Info.plist;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.intervalpro.app;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		2031DA8E283355A875661759 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = "";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = IntervalPro;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				MARKETING_VERSION = 1.0.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.9;
+			};
+			name = Release;
+		};
+		6FE7391A128D9ACBBD3FF1C3 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.intervalpro.app.tests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/IntervalPro.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/IntervalPro";
+			};
+			name = Debug;
+		};
+		72B6FD801FAF88CCEAF03CCE /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.intervalpro.app.tests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/IntervalPro.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/IntervalPro";
+			};
+			name = Release;
+		};
+		85157B71562A8BC9EB4E9964 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = IntervalPro/IntervalPro.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				DEVELOPMENT_TEAM = SMU9256WVS;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = IntervalPro/Resources/Info.plist;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.intervalpro.app;
+				SDKROOT = iphoneos;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		99D440C69347AFEC35A83834 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = IntervalPro;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				MARKETING_VERSION = 1.0.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.9;
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		2D1E068751D4B44167776522 /* Build configuration list for PBXNativeTarget "IntervalProTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				6FE7391A128D9ACBBD3FF1C3 /* Debug */,
+				72B6FD801FAF88CCEAF03CCE /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		8CCBA44E41DF282AD72BDE8F /* Build configuration list for PBXNativeTarget "IntervalPro" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				126F3CD502FD624B8A142ADE /* Debug */,
+				85157B71562A8BC9EB4E9964 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		923EE53CF8F5CF0BF6816795 /* Build configuration list for PBXProject "IntervalPro" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				99D440C69347AFEC35A83834 /* Debug */,
+				2031DA8E283355A875661759 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = D0F765E32F1FF9BB00EAFAFE /* Project object */;
+}
