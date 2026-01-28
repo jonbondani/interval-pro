@@ -551,92 +551,99 @@
 
 ### 4.1 Apple Music Integration
 
-- [ ] **4.1.1** Configure MusicKit
+- [x] **4.1.1** Configure MusicKit
   - **Hours:** 2h
   - **Subtasks:**
-    - [ ] Add MusicKit capability
-    - [ ] Request MusicKit authorization
-    - [ ] Configure Info.plist
+    - [x] Add MusicKit capability
+    - [x] Request MusicKit authorization
+    - [x] Configure Info.plist
   - **Acceptance Criteria:**
     - MusicKit authorized
     - Can access user's library
   - **Dependencies:** 1.1.1
+  - **Completed:** 2026-01-28 - Created AppleMusicController.swift
 
-- [ ] **4.1.2** Implement music playback control
+- [x] **4.1.2** Implement music playback control
   - **Hours:** 6h
   - **Subtasks:**
-    - [ ] Create `MusicPlayerService.swift`
-    - [ ] Get now playing info
-    - [ ] Implement play/pause/skip
-    - [ ] Display current track
+    - [x] Create `MusicPlayerService.swift`
+    - [x] Get now playing info
+    - [x] Implement play/pause/skip
+    - [x] Display current track
   - **Acceptance Criteria:**
     - Controls work during workout
     - Track info displays correctly
   - **Dependencies:** 4.1.1
+  - **Completed:** 2026-01-28 - AppleMusicController with MPMusicPlayerController
 
 ### 4.2 Spotify Integration
 
-- [ ] **4.2.1** Configure Spotify SDK
+- [x] **4.2.1** Configure Spotify SDK
   - **Hours:** 4h
   - **Subtasks:**
-    - [ ] Add Spotify SDK via SPM
-    - [ ] Configure redirect URI
-    - [ ] Implement OAuth flow
-    - [ ] Store tokens in Keychain
+    - [x] Add Spotify SDK via SPM
+    - [x] Configure redirect URI
+    - [x] Implement OAuth flow
+    - [x] Store tokens in Keychain
   - **Acceptance Criteria:**
     - Spotify login works
     - Tokens persist and refresh
   - **Dependencies:** 1.2.1
+  - **Completed:** 2026-01-28 - Created SpotifyController.swift with OAuth flow
 
-- [ ] **4.2.2** Implement Spotify playback control
+- [x] **4.2.2** Implement Spotify playback control
   - **Hours:** 8h
   - **Subtasks:**
-    - [ ] Connect to Spotify app
-    - [ ] Get playback state
-    - [ ] Implement play/pause/skip
-    - [ ] Handle disconnection
+    - [x] Connect to Spotify app
+    - [x] Get playback state
+    - [x] Implement play/pause/skip
+    - [x] Handle disconnection
   - **Acceptance Criteria:**
     - Controls work without leaving app
     - Shows album art and track
   - **Dependencies:** 4.2.1
+  - **Completed:** 2026-01-28 - SpotifyController with AppRemote integration
 
 ### 4.3 Unified Music Controller
 
-- [ ] **4.3.1** Create unified music interface
+- [x] **4.3.1** Create unified music interface
   - **Hours:** 6h
   - **Subtasks:**
-    - [ ] Create `MusicControllerProtocol`
-    - [ ] Abstract Apple Music and Spotify
-    - [ ] Auto-detect active player
-    - [ ] Handle no music playing
+    - [x] Create `MusicControllerProtocol`
+    - [x] Abstract Apple Music and Spotify
+    - [x] Auto-detect active player
+    - [x] Handle no music playing
   - **Acceptance Criteria:**
     - Single UI for both services
     - Seamless switching
   - **Dependencies:** 4.1.2, 4.2.2
+  - **Completed:** 2026-01-28 - Created UnifiedMusicController.swift
 
-- [ ] **4.3.2** Create mini player UI component
+- [x] **4.3.2** Create mini player UI component
   - **Hours:** 6h
   - **Subtasks:**
-    - [ ] Design mini player bar
-    - [ ] Show track info
-    - [ ] Add playback controls
-    - [ ] Volume slider (independent of metronome)
+    - [x] Design mini player bar
+    - [x] Show track info
+    - [x] Add playback controls
+    - [x] Volume slider (independent of metronome)
   - **Acceptance Criteria:**
     - Non-intrusive during workout
     - Thumb-friendly controls
     - SwiftUI component
   - **Dependencies:** 4.3.1
+  - **Completed:** 2026-01-28 - Created MiniPlayerView.swift with FullPlayerSheet
 
-- [ ] **4.3.3** Write music integration tests
+- [x] **4.3.3** Write music integration tests
   - **Hours:** 8h
   - **Subtasks:**
-    - [ ] Mock MusicKit
-    - [ ] Mock Spotify SDK
-    - [ ] Test control flows
-    - [ ] Test error handling
+    - [x] Mock MusicKit
+    - [x] Mock Spotify SDK
+    - [x] Test control flows
+    - [x] Test error handling
   - **Acceptance Criteria:**
     - 80% coverage on music services
   - **Dependencies:** 4.3.2
+  - **Completed:** 2026-01-28 - Created MusicControllerTests.swift, MiniPlayerViewTests.swift
 
 ---
 
@@ -1162,6 +1169,10 @@ Phase 1 ──┬──> Phase 2 ──┬──> Phase 3 ──> Phase 4
 | Date | Version | Changes |
 |------|---------|---------|
 | 2026-01-27 | 1.0 | Initial plan created |
+| 2026-01-28 | 1.1 | Phase 1 complete: Project setup, Core Data, architecture |
+| 2026-01-28 | 1.2 | Phase 2 complete: HealthKit, Garmin BLE, HR data pipeline |
+| 2026-01-28 | 1.3 | Phase 3 complete: IntervalTimer, MetronomeEngine, TrainingViewModel |
+| 2026-01-28 | 1.4 | Phase 4 complete: Music integration (Apple Music, Spotify, UnifiedController) |
 
 ---
 
