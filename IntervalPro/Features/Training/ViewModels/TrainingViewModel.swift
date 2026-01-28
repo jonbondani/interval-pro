@@ -93,24 +93,26 @@ final class TrainingViewModel: ObservableObject {
 
     // MARK: - Init
     init(
-        intervalTimer: IntervalTimer = IntervalTimer(),
-        hrDataService: HRDataService = .shared,
-        audioEngine: AudioEngineProtocol = MetronomeEngine.shared,
-        garminManager: GarminManaging = GarminManager.shared,
-        healthKitManager: HealthKitManaging = HealthKitManager.shared,
-        sessionRepository: SessionRepositoryProtocol = SessionRepository(),
-        musicController: UnifiedMusicController = .shared
+        intervalTimer: IntervalTimer? = nil,
+        hrDataService: HRDataService? = nil,
+        audioEngine: AudioEngineProtocol? = nil,
+        garminManager: GarminManaging? = nil,
+        healthKitManager: HealthKitManaging? = nil,
+        sessionRepository: SessionRepositoryProtocol? = nil,
+        musicController: UnifiedMusicController? = nil
     ) {
-        self.intervalTimer = intervalTimer
-        self.hrDataService = hrDataService
-        self.audioEngine = audioEngine
-        self.garminManager = garminManager
-        self.healthKitManager = healthKitManager
-        self.sessionRepository = sessionRepository
-        self.musicController = musicController
+        // Asignamos los valores aquí dentro (MainActor), donde es seguro instanciarlos
+        self.intervalTimer = intervalTimer ?? IntervalTimer()
+        self.hrDataService = hrDataService ?? HRDataService.shared
+        self.audioEngine = audioEngine ?? MetronomeEngine.shared
+        self.garminManager = garminManager ?? GarminManager.shared
+        self.healthKitManager = healthKitManager ?? HealthKitManager.shared
+        self.sessionRepository = sessionRepository ?? SessionRepository()
+        self.musicController = musicController ?? UnifiedMusicController.shared
 
-        setupBindings()
-        setupTimerCallbacks()
+        // El resto de tu código de inicialización se queda igual:
+        self.setupBindings()
+        self.setupTimerCallbacks()
     }
 
     // MARK: - Setup

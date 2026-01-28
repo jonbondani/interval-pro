@@ -285,7 +285,7 @@ final class UnifiedMusicController: ObservableObject {
 
         await activeController?.setVolume(config.musicVolume)
 
-        logger.debug("Music restored to \(config.musicVolume)")
+        logger.debug("Music restored to \(self.config.musicVolume)")
     }
 
     // MARK: - Config Persistence

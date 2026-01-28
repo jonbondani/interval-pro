@@ -19,6 +19,7 @@ protocol HealthKitManaging: AnyObject {
     func pauseWorkout() async throws
     func resumeWorkout() async throws
     func endWorkout() async throws -> HKWorkout?
+    func addLapEvent(at date: Date) async throws
 
     // MARK: - Queries
     func fetchHeartRateSamples(from: Date, to: Date) async throws -> [HRSample]
@@ -75,7 +76,11 @@ enum HealthKitError: LocalizedError {
 
 // MARK: - Mock for Testing and Previews
 @MainActor
-final class MockHealthKitManager: HealthKitManaging {
+final class MockHealthKitManager: @preconcurrency HealthKitManaging {
+    func addLapEvent(at date: Date) async throws {
+        
+    }
+    
     // MARK: - State
     var isAuthorized: Bool = false
     private var isMonitoring = false

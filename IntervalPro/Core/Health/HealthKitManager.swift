@@ -5,7 +5,7 @@ import Combine
 /// HealthKit manager for heart rate monitoring and workout writing
 /// Per CLAUDE.md: Privacy compliance required for HR data
 @MainActor
-final class HealthKitManager: ObservableObject, HealthKitManaging {
+final class HealthKitManager: ObservableObject, @preconcurrency HealthKitManaging {
     // MARK: - Singleton
     static let shared = HealthKitManager()
 
@@ -161,11 +161,15 @@ final class HealthKitManager: ObservableObject, HealthKitManaging {
             anchor: anchor,
             limit: HKObjectQueryNoLimit
         ) { [weak self] _, samples, _, _, error in
-            self?.processHeartRateSamples(samples)
+            Task { @MainActor in
+                    self?.processHeartRateSamples(samples)
+                }
         }
 
         anchoredQuery.updateHandler = { [weak self] _, samples, _, _, error in
-            self?.processHeartRateSamples(samples)
+            Task { @MainActor in
+                    self?.processHeartRateSamples(samples)
+                }
         }
 
         healthStore.execute(anchoredQuery)
@@ -338,7 +342,15 @@ final class HealthKitManager: ObservableObject, HealthKitManaging {
             )
         }
 
-        try await builder.add(hkSamples)
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            builder.add(hkSamples) { success, error in
+                if let error = error {
+                    continuation.resume(throwing: error)
+                } else {
+                    continuation.resume()
+                }
+            }
+        }
     }
 
     /// Add workout event (for laps)
@@ -388,7 +400,7 @@ final class HealthKitManager: ObservableObject, HealthKitManaging {
                         bpm: Int(sample.quantity.doubleValue(
                             for: HKUnit.count().unitDivided(by: .minute())
                         )),
-                        source: .healthKit
+                        source: DataSource.healthKit
                     )
                 } ?? []
 

@@ -45,25 +45,17 @@ final class HRDataService: ObservableObject {
     }
 
     // MARK: - Init
-    private init(
-        garminManager: GarminManaging = GarminManager.shared,
-        healthKitManager: HealthKitManaging = HealthKitManager.shared
-    ) {
-        self.garminManager = garminManager
-        self.healthKitManager = healthKitManager
-
+    // Unificamos todo en un solo init
+    init(garminManager: GarminManaging? = nil, healthKitManager: HealthKitManaging? = nil) {
+        // Si no nos pasan nada (es nil), usamos los Singletons compartidos.
+        // Esto evita el warning de "Main Actor" en la declaración.
+        self.garminManager = garminManager ?? GarminManager.shared
+        self.healthKitManager = healthKitManager ?? HealthKitManager.shared
+        
         setupSubscriptions()
         setupFallbackNotification()
     }
-
-    // For testing with dependency injection
-    init(garminManager: GarminManaging, healthKitManager: HealthKitManaging) {
-        self.garminManager = garminManager
-        self.healthKitManager = healthKitManager
-
-        setupSubscriptions()
-        setupFallbackNotification()
-    }
+    
 
     // MARK: - Setup
     private func setupSubscriptions() {
@@ -262,7 +254,7 @@ final class HRDataService: ObservableObject {
         zoneTrackingTimer = nil
         targetZone = nil
 
-        Log.health.info("Zone tracking stopped. Time in zone: \(timeInZone.formattedMinutesSeconds)")
+        Log.health.info("Zone tracking stopped. Time in zone: \(self.timeInZone.formattedMinutesSeconds)")
     }
 
     private func updateZoneTime() {

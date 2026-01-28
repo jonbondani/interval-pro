@@ -1,4 +1,5 @@
 import SwiftUI
+import Combine
 
 /// View for pairing with Garmin devices
 struct GarminPairingView: View {

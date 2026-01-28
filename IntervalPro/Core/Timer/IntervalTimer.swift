@@ -1,5 +1,6 @@
 import Foundation
 import Combine
+import QuartzCore
 
 /// High-precision interval timer engine with state machine
 /// Manages work/rest phases, series tracking, and timing
@@ -67,9 +68,9 @@ final class IntervalTimer: ObservableObject {
         Log.training.debug("IntervalTimer initialized")
     }
 
-    deinit {
+    /*deinit {
         stopDisplayLink()
-    }
+    }*/
 
     // MARK: - Configuration
     func configure(with plan: TrainingPlan) {
@@ -116,7 +117,7 @@ final class IntervalTimer: ObservableObject {
         pausedTime = CACurrentMediaTime()
         stopDisplayLink()
 
-        Log.training.debug("Timer paused at \(phaseElapsedTime.formattedMinutesSeconds)")
+        Log.training.debug("Timer paused at \(self.phaseElapsedTime.formattedMinutesSeconds)")
     }
 
     func resume() {
@@ -261,7 +262,7 @@ final class IntervalTimer: ObservableObject {
 
         onWorkoutComplete?()
 
-        Log.training.info("Workout complete! Total time: \(totalElapsedTime.formattedHoursMinutesSeconds)")
+        Log.training.info("Workout complete! Total time: \(self.totalElapsedTime.formattedHoursMinutesSeconds)")
     }
 
     // MARK: - Time Warnings

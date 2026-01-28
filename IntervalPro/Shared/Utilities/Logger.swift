@@ -1,4 +1,5 @@
 import os.log
+import Foundation
 
 /// Centralized logging infrastructure using os.Logger
 /// Per CLAUDE.md: Never use print(), always use os.Logger

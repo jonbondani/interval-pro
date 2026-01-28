@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 import Combine
 import os
 
@@ -6,7 +7,7 @@ import os
 /// Uses Spotify iOS SDK for Premium users
 /// Note: Requires Spotify app to be installed
 @MainActor
-final class SpotifyController: MusicControllerProtocol {
+final class SpotifyController: @preconcurrency MusicControllerProtocol {
 
     // MARK: - Published State
 
@@ -366,7 +367,7 @@ extension SpotifyController: SpotifyAppRemoteDelegate {
             // Retry logic
             if connectionRetryCount < maxConnectionRetries {
                 connectionRetryCount += 1
-                logger.debug("Retrying connection (\(connectionRetryCount)/\(maxConnectionRetries))")
+                logger.debug("Retrying connection (\(self.connectionRetryCount)/\(self.maxConnectionRetries))")
                 try? await Task.sleep(for: .seconds(2))
                 try? await connect()
             } else {
@@ -406,7 +407,7 @@ extension SpotifyController: SPTAppRemotePlayerStateDelegate {
             )
             nowPlayingSubject.send(track)
 
-            logger.debug("Spotify state: \(newState), track: \(track.title)")
+            logger.debug("Spotify state: \(String(describing: newState)), track: \(track.title)")
         }
     }
 }

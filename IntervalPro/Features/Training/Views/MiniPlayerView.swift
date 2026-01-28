@@ -159,7 +159,12 @@ struct MiniPlayerView: View {
                 Slider(
                     value: Binding(
                         get: { Double(musicController.config.musicVolume) },
-                        set: { Task { await musicController.setVolume(Float($0)) } }
+                        set: { newValue in // 1. Recibimos el valor explícitamente
+                                    Task {
+                                        // 2. Usamos 'newValue' dentro de la Task
+                                        await musicController.setVolume(Float(newValue))
+                                    }
+                                }
                     ),
                     in: 0...1
                 )
@@ -291,7 +296,12 @@ struct FullPlayerSheet: View {
                     Slider(
                         value: Binding(
                             get: { Double(musicController.config.musicVolume) },
-                            set: { Task { await musicController.setVolume(Float($0)) } }
+                            set: { newValue in // 1. Recibimos el valor explícitamente
+                                        Task {
+                                            // 2. Usamos 'newValue' dentro de la Task
+                                            await musicController.setVolume(Float(newValue))
+                                        }
+                                    }
                         )
                     )
                     Image(systemName: "speaker.wave.3.fill")
