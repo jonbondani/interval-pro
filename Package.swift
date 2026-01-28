@@ -6,7 +6,7 @@ import PackageDescription
 let package = Package(
     name: "IntervalProDependencies",
     platforms: [
-        .iOS(.v16)
+        .iOS(.v26)
     ],
     products: [
         .library(

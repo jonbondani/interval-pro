@@ -7,30 +7,30 @@ import HealthKit
 @MainActor
 final class TrainingViewModel: ObservableObject {
     // MARK: - Published State - Timer
-    @Published private(set) var currentPhase: IntervalPhase = .idle
-    @Published private(set) var timerState: TimerState = .stopped
-    @Published private(set) var currentSeries: Int = 0
-    @Published private(set) var totalSeries: Int = 0
-    @Published private(set) var phaseRemainingTime: TimeInterval = 0
-    @Published private(set) var totalElapsedTime: TimeInterval = 0
-    @Published private(set) var phaseProgress: Double = 0
+    @Published var currentPhase: IntervalPhase = .idle
+    @Published var timerState: TimerState = .stopped
+    @Published var currentSeries: Int = 0
+    @Published var totalSeries: Int = 0
+    @Published var phaseRemainingTime: TimeInterval = 0
+    @Published var totalElapsedTime: TimeInterval = 0
+    @Published var phaseProgress: Double = 0
 
     // MARK: - Published State - Heart Rate
-    @Published private(set) var currentHeartRate: Int = 0
-    @Published private(set) var zoneStatus: ZoneStatus = .inZone
-    @Published private(set) var hrSource: DataSource = .healthKit
-    @Published private(set) var timeInZone: TimeInterval = 0
+    @Published var currentHeartRate: Int = 0
+    @Published var zoneStatus: ZoneStatus = .inZone
+    @Published var hrSource: DataSource = .healthKit
+    @Published var timeInZone: TimeInterval = 0
 
     // MARK: - Published State - Metrics
-    @Published private(set) var currentPace: Double = 0
-    @Published private(set) var currentSpeed: Double = 0
-    @Published private(set) var totalDistance: Double = 0
-    @Published private(set) var avgHeartRate: Int = 0
+    @Published var currentPace: Double = 0
+    @Published var currentSpeed: Double = 0
+    @Published var totalDistance: Double = 0
+    @Published var avgHeartRate: Int = 0
 
     // MARK: - Published State - Best Session Comparison
-    @Published private(set) var bestSession: TrainingSession?
-    @Published private(set) var deltaVsBest: TimeInterval = 0
-    @Published private(set) var isAheadOfBest: Bool = false
+    @Published var bestSession: TrainingSession?
+    @Published var deltaVsBest: TimeInterval = 0
+    @Published var isAheadOfBest: Bool = false
 
     // MARK: - Published State - Audio
     @Published var isMetronomeEnabled: Bool = true
@@ -38,7 +38,7 @@ final class TrainingViewModel: ObservableObject {
     @Published var isVoiceEnabled: Bool = true
 
     // MARK: - Plan
-    @Published private(set) var plan: TrainingPlan?
+    @Published var plan: TrainingPlan?
 
     // MARK: - Dependencies
     private let intervalTimer: IntervalTimer
