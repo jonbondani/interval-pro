@@ -134,6 +134,8 @@ custom_rules:
     regex: "^import UIKit$"
     message: "UIKit is prohibited. Use SwiftUI only. See CLAUDE.md."
     severity: error
+    excluded:
+      - "IntervalPro/Core/Audio/.*"  # Music SDKs require UIKit
 
   no_hardcoded_bpm:
     name: "No hardcoded BPM values"

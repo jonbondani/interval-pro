@@ -29,7 +29,10 @@ final class AppleMusicController: MusicControllerProtocol {
     private(set) var currentVolume: Float = 0.7
 
     private var authorizationStatus: MusicAuthorization.Status = .notDetermined
-    private let systemPlayer = MPMusicPlayerController.systemMusicPlayer
+    private lazy var systemPlayer: MPMusicPlayerController = {
+        MPMusicPlayerController.systemMusicPlayer
+    }()
+    private var hasSetupObservers = false
     private var cancellables = Set<AnyCancellable>()
     private var playbackObserver: NSObjectProtocol?
     private var nowPlayingObserver: NSObjectProtocol?
@@ -43,7 +46,8 @@ final class AppleMusicController: MusicControllerProtocol {
     // MARK: - Init
 
     private init() {
-        setupObservers()
+        // Don't access system player until authorized
+        // This prevents crash when NSAppleMusicUsageDescription is accessed
         checkAuthorizationStatus()
     }
 
@@ -59,6 +63,9 @@ final class AppleMusicController: MusicControllerProtocol {
     // MARK: - Setup
 
     private func setupObservers() {
+        guard !hasSetupObservers else { return }
+        hasSetupObservers = true
+
         // Observe playback state changes
         playbackObserver = NotificationCenter.default.addObserver(
             forName: .MPMusicPlayerControllerPlaybackStateDidChange,
@@ -86,9 +93,14 @@ final class AppleMusicController: MusicControllerProtocol {
     }
 
     private func checkAuthorizationStatus() {
-        Task {
+        Task { @MainActor in
             authorizationStatus = MusicAuthorization.currentStatus
             isConnected = authorizationStatus == .authorized
+
+            // Only setup observers if already authorized
+            if isConnected && !hasSetupObservers {
+                setupObservers()
+            }
         }
     }
 
@@ -104,8 +116,7 @@ final class AppleMusicController: MusicControllerProtocol {
         case .authorized:
             isConnected = true
             logger.info("MusicKit authorization granted")
-            updatePlaybackState()
-            updateNowPlaying()
+            setupObservers()  // Safe to access system player now
 
         case .denied:
             isConnected = false
@@ -178,6 +189,8 @@ final class AppleMusicController: MusicControllerProtocol {
     // MARK: - State Updates
 
     private func updatePlaybackState() {
+        guard hasSetupObservers else { return }
+
         let newState: MusicPlaybackState
 
         switch systemPlayer.playbackState {
@@ -200,6 +213,8 @@ final class AppleMusicController: MusicControllerProtocol {
     }
 
     private func updateNowPlaying() {
+        guard hasSetupObservers else { return }
+
         guard let item = systemPlayer.nowPlayingItem else {
             nowPlayingSubject.send(nil)
             return

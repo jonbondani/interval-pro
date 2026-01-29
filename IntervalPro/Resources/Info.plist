@@ -42,6 +42,8 @@
 		<key>NSAllowsArbitraryLoads</key>
 		<false/>
 	</dict>
+	<key>NSAppleMusicUsageDescription</key>
+	<string>IntervalPro puede mostrar y controlar tu música durante el entrenamiento para una experiencia integrada con el metrónomo.</string>
 	<key>NSBluetoothAlwaysUsageDescription</key>
 	<string>IntervalPro usa Bluetooth para conectarse a tu Garmin Fenix y recibir datos de frecuencia cardíaca, velocidad y ritmo en tiempo real.</string>
 	<key>NSBluetoothPeripheralUsageDescription</key>

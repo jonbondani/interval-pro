@@ -257,8 +257,12 @@ final class TrainingViewModel: ObservableObject {
             hrDataService.startZoneTracking(targetZone: zone)
         }
 
-        // Start HealthKit workout
-        try await healthKitManager.startWorkout(activityType: .running)
+        // Start HealthKit workout (non-blocking - may fail on simulator)
+        do {
+            try await healthKitManager.startWorkout(activityType: .running)
+        } catch {
+            Log.training.warning("HealthKit workout failed to start (expected on simulator): \(error)")
+        }
 
         // Start audio
         if isMetronomeEnabled {

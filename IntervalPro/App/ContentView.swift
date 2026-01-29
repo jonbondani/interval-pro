@@ -52,7 +52,6 @@ struct MainTabView: View {
 struct HomeView: View {
     @EnvironmentObject private var navigationRouter: NavigationRouter
     @State private var selectedPlan: TrainingPlan?
-    @State private var showTraining = false
 
     private let plans = TrainingPlan.defaultTemplates
 
@@ -82,10 +81,8 @@ struct HomeView: View {
                     EmptyView()
                 }
             }
-            .fullScreenCover(isPresented: $showTraining) {
-                if let plan = selectedPlan {
-                    TrainingView(plan: plan)
-                }
+            .fullScreenCover(item: $selectedPlan) { plan in
+                TrainingView(plan: plan)
             }
         }
     }
@@ -112,7 +109,6 @@ struct HomeView: View {
 
             Button {
                 selectedPlan = TrainingPlan.intermediate
-                showTraining = true
             } label: {
                 HStack {
                     VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
@@ -154,7 +150,6 @@ struct HomeView: View {
             ForEach(plans) { plan in
                 PlanCard(plan: plan) {
                     selectedPlan = plan
-                    showTraining = true
                 }
             }
         }

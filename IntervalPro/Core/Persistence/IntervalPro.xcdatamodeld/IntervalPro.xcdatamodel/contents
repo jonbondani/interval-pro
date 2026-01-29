@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="23231" systemVersion="24D5034f" minimumToolsVersion="Automatic" sourceLanguage="Swift" usedWithSwiftData="YES" userDefinedModelVersionIdentifier="">
+    <entity name="TrainingPlanEntity" representedClassName="TrainingPlanEntity" syncable="YES">
+        <attribute name="cooldownDuration" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="createdAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="isDefault" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
+        <attribute name="name" optional="YES" attributeType="String"/>
+        <attribute name="restDuration" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="restTargetBPM" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="restToleranceBPM" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="seriesCount" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="warmupDuration" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="workDuration" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="workTargetBPM" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="workToleranceBPM" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
+        <relationship name="sessions" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="TrainingSessionEntity" inverseName="plan" inverseEntity="TrainingSessionEntity"/>
+    </entity>
+    <entity name="TrainingSessionEntity" representedClassName="TrainingSessionEntity" syncable="YES">
+        <attribute name="avgHeartRate" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="endDate" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="intervalsData" optional="YES" attributeType="Binary"/>
+        <attribute name="isCompleted" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
+        <attribute name="maxHeartRate" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="minHeartRate" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="planId" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="planName" optional="YES" attributeType="String"/>
+        <attribute name="score" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="startDate" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="timeInZone" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="totalDistance" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <relationship name="plan" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="TrainingPlanEntity" inverseName="sessions" inverseEntity="TrainingPlanEntity"/>
+    </entity>
+</model>
