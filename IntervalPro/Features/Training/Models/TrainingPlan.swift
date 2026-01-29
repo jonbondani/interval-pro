@@ -1,5 +1,31 @@
 import Foundation
 
+/// A single work block with its own zone and rest period
+/// Supports progressive training with different intensities
+struct WorkBlock: Codable, Equatable, Identifiable {
+    var id: UUID = UUID()
+    var workZone: HeartRateZone
+    var workDuration: TimeInterval  // seconds
+    var restZone: HeartRateZone
+    var restDuration: TimeInterval  // seconds
+
+    init(
+        workZone: HeartRateZone,
+        workDuration: TimeInterval = 180,
+        restZone: HeartRateZone = HeartRateZone(targetBPM: 150, toleranceBPM: 10),
+        restDuration: TimeInterval = 180
+    ) {
+        self.workZone = workZone
+        self.workDuration = workDuration
+        self.restZone = restZone
+        self.restDuration = restDuration
+    }
+
+    var totalDuration: TimeInterval {
+        workDuration + restDuration
+    }
+}
+
 /// A training plan configuration for interval workouts
 /// Per CLAUDE.md: HR zones must NEVER be hardcoded
 struct TrainingPlan: Identifiable, Codable, Equatable {
@@ -11,9 +37,25 @@ struct TrainingPlan: Identifiable, Codable, Equatable {
     var restDuration: TimeInterval  // seconds
     var seriesCount: Int
     var warmupDuration: TimeInterval?
+    var warmupZone: HeartRateZone?
     var cooldownDuration: TimeInterval?
+    var cooldownZone: HeartRateZone?
     var createdAt: Date
     var isDefault: Bool
+
+    /// Optional array of work blocks for progressive training
+    /// If set, overrides single workZone/restZone
+    var workBlocks: [WorkBlock]?
+
+    /// Whether this plan uses progressive blocks
+    var isProgressive: Bool {
+        workBlocks != nil && !(workBlocks?.isEmpty ?? true)
+    }
+
+    /// Number of blocks per series (1 for simple plans, N for progressive)
+    var blocksPerSeries: Int {
+        workBlocks?.count ?? 1
+    }
 
     // MARK: - Computed Properties
     var totalDuration: TimeInterval {
