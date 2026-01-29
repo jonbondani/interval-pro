@@ -108,7 +108,7 @@ struct HomeView: View {
                 .font(.title2.bold())
 
             Button {
-                selectedPlan = TrainingPlan.intermediate
+                selectedPlan = TrainingPlan.recommended
             } label: {
                 HStack {
                     VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
@@ -116,7 +116,7 @@ struct HomeView: View {
                             .font(.headline)
                             .foregroundStyle(.white)
 
-                        Text("4x3min Intermedio")
+                        Text("Pirámide 160-170-180 BPM")
                             .font(.subheadline)
                             .foregroundStyle(.white.opacity(0.8))
                     }

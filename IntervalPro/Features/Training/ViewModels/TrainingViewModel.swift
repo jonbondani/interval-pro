@@ -11,6 +11,8 @@ final class TrainingViewModel: ObservableObject {
     @Published var timerState: TimerState = .stopped
     @Published var currentSeries: Int = 0
     @Published var totalSeries: Int = 0
+    @Published var currentBlock: Int = 0
+    @Published var totalBlocks: Int = 1
     @Published var phaseRemainingTime: TimeInterval = 0
     @Published var totalElapsedTime: TimeInterval = 0
     @Published var phaseProgress: Double = 0
@@ -66,17 +68,8 @@ final class TrainingViewModel: ObservableObject {
 
     // MARK: - Computed
     var targetZone: HeartRateZone? {
-        guard let plan = plan else { return nil }
-        switch currentPhase {
-        case .work:
-            return plan.workZone
-        case .rest, .cooldown:
-            return plan.restZone
-        case .warmup:
-            return plan.restZone  // Lower intensity during warmup
-        default:
-            return nil
-        }
+        // Use timer's context-aware zone (handles progressive plans)
+        intervalTimer.currentTargetZone
     }
 
     var formattedPace: String {
@@ -152,6 +145,12 @@ final class TrainingViewModel: ObservableObject {
 
         intervalTimer.$totalSeries
             .assign(to: &$totalSeries)
+
+        intervalTimer.$currentBlock
+            .assign(to: &$currentBlock)
+
+        intervalTimer.$totalBlocks
+            .assign(to: &$totalBlocks)
 
         intervalTimer.$phaseRemainingTime
             .assign(to: &$phaseRemainingTime)
@@ -246,7 +245,9 @@ final class TrainingViewModel: ObservableObject {
         // Start HR monitoring - use simulation if no real source available
         if !garminManager.isConnected {
             // Enable simulation mode for testing without Garmin
-            hrDataService.enableSimulation(targetHR: plan.workZone.targetBPM)
+            // Start with warmup zone if available, otherwise first work zone
+            let initialZone = plan.warmupZone ?? plan.workZone
+            hrDataService.enableSimulation(targetHR: initialZone.targetBPM)
             Log.training.info("No Garmin connected - using simulated HR data")
         } else {
             try await hrDataService.start()
@@ -354,11 +355,9 @@ final class TrainingViewModel: ObservableObject {
             await musicController.restoreFromDuck()
         }
 
-        // Update metronome BPM based on phase
-        if newPhase == .work, let plan = plan {
-            audioEngine.updateMetronomeBPM(plan.workZone.targetBPM)
-        } else if newPhase == .rest, let plan = plan {
-            audioEngine.updateMetronomeBPM(plan.restZone.targetBPM)
+        // Update metronome BPM based on current target zone
+        if let zone = targetZone {
+            audioEngine.updateMetronomeBPM(zone.targetBPM)
         }
 
         // Garmin AutoLap

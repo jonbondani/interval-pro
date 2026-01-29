@@ -11,10 +11,13 @@ final class IntervalTimer: ObservableObject {
     @Published private(set) var timerState: TimerState = .stopped
     @Published private(set) var currentSeries: Int = 0
     @Published private(set) var totalSeries: Int = 0
+    @Published private(set) var currentBlock: Int = 0      // Current block within series (1-based)
+    @Published private(set) var totalBlocks: Int = 1       // Total blocks per series
     @Published private(set) var elapsedTime: TimeInterval = 0
     @Published private(set) var phaseElapsedTime: TimeInterval = 0
     @Published private(set) var phaseRemainingTime: TimeInterval = 0
     @Published private(set) var totalElapsedTime: TimeInterval = 0
+    @Published private(set) var currentTargetZone: HeartRateZone?
 
     // MARK: - Configuration
     private var plan: TrainingPlan?
@@ -76,11 +79,13 @@ final class IntervalTimer: ObservableObject {
     func configure(with plan: TrainingPlan) {
         self.plan = plan
         self.totalSeries = plan.seriesCount
+        self.totalBlocks = plan.blocksPerSeries
         self.currentSeries = 0
+        self.currentBlock = 0
 
         reset()
 
-        Log.training.info("Timer configured: \(plan.name), \(plan.seriesCount) series")
+        Log.training.info("Timer configured: \(plan.name), \(plan.seriesCount) series, \(plan.blocksPerSeries) blocks/series")
     }
 
     // MARK: - Control
@@ -99,10 +104,12 @@ final class IntervalTimer: ObservableObject {
 
         // Determine starting phase
         if let warmupDuration = plan.warmupDuration, warmupDuration > 0 {
+            currentTargetZone = plan.warmupZone ?? plan.restZone
             transitionTo(phase: .warmup, duration: warmupDuration)
         } else {
             currentSeries = 1
-            transitionTo(phase: .work, duration: plan.workDuration)
+            currentBlock = 1
+            startWorkPhase()
         }
 
         startDisplayLink()
@@ -146,6 +153,8 @@ final class IntervalTimer: ObservableObject {
 
         currentPhase = .idle
         currentSeries = 0
+        currentBlock = 0
+        currentTargetZone = nil
         elapsedTime = 0
         phaseElapsedTime = 0
         phaseRemainingTime = plan?.warmupDuration ?? plan?.workDuration ?? 0
@@ -224,24 +233,36 @@ final class IntervalTimer: ObservableObject {
         case .warmup:
             // Warmup complete, start first work interval
             currentSeries = 1
-            transitionTo(phase: .work, duration: plan.workDuration)
+            currentBlock = 1
+            startWorkPhase()
 
         case .work:
             // Work complete, transition to rest
-            onSeriesComplete?(currentSeries)
-            transitionTo(phase: .rest, duration: plan.restDuration)
+            startRestPhase()
 
         case .rest:
-            // Rest complete, check if more series
-            if currentSeries < totalSeries {
-                currentSeries += 1
-                transitionTo(phase: .work, duration: plan.workDuration)
+            // Rest complete, check if more blocks in this series
+            if plan.isProgressive, let blocks = plan.workBlocks, currentBlock < blocks.count {
+                // More blocks in this series
+                currentBlock += 1
+                startWorkPhase()
             } else {
-                // All series complete
-                if let cooldownDuration = plan.cooldownDuration, cooldownDuration > 0 {
-                    transitionTo(phase: .cooldown, duration: cooldownDuration)
+                // All blocks in series complete
+                onSeriesComplete?(currentSeries)
+
+                if currentSeries < totalSeries {
+                    // Start next series
+                    currentSeries += 1
+                    currentBlock = 1
+                    startWorkPhase()
                 } else {
-                    completeWorkout()
+                    // All series complete
+                    if let cooldownDuration = plan.cooldownDuration, cooldownDuration > 0 {
+                        currentTargetZone = plan.cooldownZone ?? plan.restZone
+                        transitionTo(phase: .cooldown, duration: cooldownDuration)
+                    } else {
+                        completeWorkout()
+                    }
                 }
             }
 
@@ -253,6 +274,44 @@ final class IntervalTimer: ObservableObject {
             // Already complete
             break
         }
+    }
+
+    private func startWorkPhase() {
+        guard let plan = plan else { return }
+
+        let workDuration: TimeInterval
+        let workZone: HeartRateZone
+
+        if plan.isProgressive, let blocks = plan.workBlocks, currentBlock > 0, currentBlock <= blocks.count {
+            let block = blocks[currentBlock - 1]
+            workDuration = block.workDuration
+            workZone = block.workZone
+        } else {
+            workDuration = plan.workDuration
+            workZone = plan.workZone
+        }
+
+        currentTargetZone = workZone
+        transitionTo(phase: .work, duration: workDuration)
+    }
+
+    private func startRestPhase() {
+        guard let plan = plan else { return }
+
+        let restDuration: TimeInterval
+        let restZone: HeartRateZone
+
+        if plan.isProgressive, let blocks = plan.workBlocks, currentBlock > 0, currentBlock <= blocks.count {
+            let block = blocks[currentBlock - 1]
+            restDuration = block.restDuration
+            restZone = block.restZone
+        } else {
+            restDuration = plan.restDuration
+            restZone = plan.restZone
+        }
+
+        currentTargetZone = restZone
+        transitionTo(phase: .rest, duration: restDuration)
     }
 
     private func completeWorkout() {

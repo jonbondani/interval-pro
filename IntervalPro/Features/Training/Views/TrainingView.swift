@@ -200,8 +200,21 @@ struct TrainingView: View {
     // MARK: - Series Progress
     private var seriesProgress: some View {
         VStack(spacing: DesignTokens.Spacing.sm) {
-            Text("Serie \(viewModel.currentSeries) de \(viewModel.totalSeries)")
-                .font(.headline)
+            // Show block info for progressive workouts
+            if viewModel.totalBlocks > 1 {
+                Text("Serie \(viewModel.currentSeries)/\(viewModel.totalSeries) · Bloque \(viewModel.currentBlock)/\(viewModel.totalBlocks)")
+                    .font(.headline)
+
+                // Show target BPM for current block
+                if let zone = viewModel.targetZone {
+                    Text("Objetivo: \(zone.targetBPM) BPM")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+            } else {
+                Text("Serie \(viewModel.currentSeries) de \(viewModel.totalSeries)")
+                    .font(.headline)
+            }
 
             if viewModel.totalSeries > 0 {
                 HStack(spacing: DesignTokens.Spacing.xs) {

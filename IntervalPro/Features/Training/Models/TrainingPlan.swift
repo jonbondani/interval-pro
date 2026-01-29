@@ -59,9 +59,19 @@ struct TrainingPlan: Identifiable, Codable, Equatable {
 
     // MARK: - Computed Properties
     var totalDuration: TimeInterval {
-        let intervalsDuration = TimeInterval(seriesCount) * (workDuration + restDuration)
         let warmup = warmupDuration ?? 0
         let cooldown = cooldownDuration ?? 0
+
+        let intervalsDuration: TimeInterval
+        if let blocks = workBlocks, !blocks.isEmpty {
+            // Progressive: sum all blocks per series
+            let blocksDuration = blocks.reduce(0) { $0 + $1.totalDuration }
+            intervalsDuration = TimeInterval(seriesCount) * blocksDuration
+        } else {
+            // Simple: single work/rest per series
+            intervalsDuration = TimeInterval(seriesCount) * (workDuration + restDuration)
+        }
+
         return warmup + intervalsDuration + cooldown
     }
 
@@ -85,7 +95,7 @@ struct TrainingPlan: Identifiable, Codable, Equatable {
         return Int(workCalories + restCalories + warmupCalories + cooldownCalories)
     }
 
-    // MARK: - Init
+    // MARK: - Init (Simple plan)
     init(
         id: UUID = UUID(),
         name: String,
@@ -95,9 +105,12 @@ struct TrainingPlan: Identifiable, Codable, Equatable {
         restDuration: TimeInterval = 180,  // 3 minutes default
         seriesCount: Int = 4,
         warmupDuration: TimeInterval? = 300,  // 5 minutes
+        warmupZone: HeartRateZone? = nil,
         cooldownDuration: TimeInterval? = 300,  // 5 minutes
+        cooldownZone: HeartRateZone? = nil,
         createdAt: Date = Date(),
-        isDefault: Bool = false
+        isDefault: Bool = false,
+        workBlocks: [WorkBlock]? = nil
     ) {
         self.id = id
         self.name = name
@@ -107,14 +120,85 @@ struct TrainingPlan: Identifiable, Codable, Equatable {
         self.restDuration = restDuration
         self.seriesCount = seriesCount
         self.warmupDuration = warmupDuration
+        self.warmupZone = warmupZone
         self.cooldownDuration = cooldownDuration
+        self.cooldownZone = cooldownZone
         self.createdAt = createdAt
         self.isDefault = isDefault
+        self.workBlocks = workBlocks
+    }
+
+    // MARK: - Init (Progressive plan with blocks)
+    init(
+        id: UUID = UUID(),
+        name: String,
+        workBlocks: [WorkBlock],
+        seriesCount: Int,
+        warmupDuration: TimeInterval? = 300,
+        warmupZone: HeartRateZone? = nil,
+        cooldownDuration: TimeInterval? = 300,
+        cooldownZone: HeartRateZone? = nil,
+        createdAt: Date = Date(),
+        isDefault: Bool = false
+    ) {
+        self.id = id
+        self.name = name
+        self.workBlocks = workBlocks
+        self.seriesCount = seriesCount
+        self.warmupDuration = warmupDuration
+        self.warmupZone = warmupZone
+        self.cooldownDuration = cooldownDuration
+        self.cooldownZone = cooldownZone
+        self.createdAt = createdAt
+        self.isDefault = isDefault
+
+        // Use first block as default work/rest zones for compatibility
+        self.workZone = workBlocks.first?.workZone ?? HeartRateZone(targetBPM: 170, toleranceBPM: 5)
+        self.restZone = workBlocks.first?.restZone ?? HeartRateZone(targetBPM: 150, toleranceBPM: 10)
+        self.workDuration = workBlocks.first?.workDuration ?? 180
+        self.restDuration = workBlocks.first?.restDuration ?? 180
     }
 }
 
 // MARK: - Default Templates
 extension TrainingPlan {
+    /// Rest zone used across all plans
+    private static let standardRestZone = HeartRateZone(targetBPM: 150, toleranceBPM: 10)
+
+    /// Recommended progressive pyramid workout
+    /// 5 min warmup @ 150 BPM
+    /// 2 series of: 3min@160 + rest, 3min@170 + rest, 3min@180 + rest
+    /// 5 min cooldown @ 150 BPM
+    static let recommended = TrainingPlan(
+        name: "Recomendado",
+        workBlocks: [
+            WorkBlock(
+                workZone: HeartRateZone(targetBPM: 160, toleranceBPM: 5),
+                workDuration: 180,  // 3 min
+                restZone: standardRestZone,
+                restDuration: 180   // 3 min
+            ),
+            WorkBlock(
+                workZone: HeartRateZone(targetBPM: 170, toleranceBPM: 5),
+                workDuration: 180,  // 3 min
+                restZone: standardRestZone,
+                restDuration: 180   // 3 min
+            ),
+            WorkBlock(
+                workZone: HeartRateZone(targetBPM: 180, toleranceBPM: 5),
+                workDuration: 180,  // 3 min
+                restZone: standardRestZone,
+                restDuration: 180   // 3 min
+            )
+        ],
+        seriesCount: 2,
+        warmupDuration: 300,     // 5 min
+        warmupZone: standardRestZone,
+        cooldownDuration: 300,   // 5 min
+        cooldownZone: standardRestZone,
+        isDefault: true
+    )
+
     /// Beginner template: Lower intensity, longer rest
     static let beginner = TrainingPlan(
         name: "Principiante",
@@ -124,7 +208,9 @@ extension TrainingPlan {
         restDuration: 180,  // 3 min
         seriesCount: 3,
         warmupDuration: 300,
+        warmupZone: HeartRateZone(targetBPM: 140, toleranceBPM: 10),
         cooldownDuration: 300,
+        cooldownZone: HeartRateZone(targetBPM: 140, toleranceBPM: 10),
         isDefault: true
     )
 
@@ -137,7 +223,9 @@ extension TrainingPlan {
         restDuration: 180,  // 3 min
         seriesCount: 4,
         warmupDuration: 300,
+        warmupZone: standardRestZone,
         cooldownDuration: 300,
+        cooldownZone: standardRestZone,
         isDefault: true
     )
 
@@ -150,9 +238,11 @@ extension TrainingPlan {
         restDuration: 120,  // 2 min
         seriesCount: 6,
         warmupDuration: 300,
+        warmupZone: standardRestZone,
         cooldownDuration: 300,
+        cooldownZone: standardRestZone,
         isDefault: true
     )
 
-    static let defaultTemplates: [TrainingPlan] = [beginner, intermediate, advanced]
+    static let defaultTemplates: [TrainingPlan] = [recommended, beginner, intermediate, advanced]
 }
