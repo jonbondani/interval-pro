@@ -553,27 +553,43 @@
 ## Milestone 1: MVP Timer ✅ COMPLETE
 
 **Target:** End of Week 5
-**Status:** Completed 2026-01-28
+**Status:** Completed 2026-01-29
 **Deliverables:**
 - [x] Working interval timer with configurable work/rest/series
 - [x] Simulated HR data (for testing without Garmin)
 - [x] Basic metronome audio
 - [x] Voice announcements for phase changes
 - [x] Minimal UI showing timer and HR
-- [x] **Functional HomeView** with plan templates (Beginner, Intermediate, Advanced)
+- [x] **Functional HomeView** with plan templates (Recommended, Beginner, Intermediate, Advanced)
 - [x] **Navigation** from HomeView to TrainingView
+- [x] **Progressive workout support** with multiple intensity blocks per series
+- [x] **Core Data model** (`IntervalPro.xcdatamodeld`) with TrainingPlanEntity and TrainingSessionEntity
 
 **Implementation Notes:**
-- HomeView shows 3 training plan templates with quick-start
-- TrainingView displays real-time HR, timer, phase, and metrics
+- HomeView shows 4 training plan templates with quick-start
+- **"Recomendado" plan**: Progressive pyramid (160→170→180 BPM) with 2 series
+- TrainingView displays real-time HR, timer, phase, block info, and metrics
 - HRDataService has simulation mode (`enableSimulation()`) for testing without Garmin
 - Simulation automatically activates when Garmin not connected
 - Plan cards show duration, series count, and target BPM
+- Works on both iPhone (with Garmin) and Simulator (with simulated HR)
+
+**Progressive Workout Structure (Recommended Plan):**
+```
+5 min warmup @ 150 BPM
+2 series of:
+  - Block 1: 3 min @ 160 BPM + 3 min rest @ 150 BPM
+  - Block 2: 3 min @ 170 BPM + 3 min rest @ 150 BPM
+  - Block 3: 3 min @ 180 BPM + 3 min rest @ 150 BPM
+5 min cooldown @ 150 BPM
+Total: 46 minutes
+```
 
 **Demo Criteria:**
 - [x] Complete 4x3min workout with audio feedback
 - [x] Timer accurate within 1 second over 30 minutes
 - [x] Audio plays over Spotify without interruption
+- [x] Progressive workout with dynamic BPM targets per block
 
 ---
 
@@ -1208,8 +1224,12 @@ Phase 1 ──┬──> Phase 2 ──┬──> Phase 3 ──> Phase 4
 | 2026-01-28 | 1.3 | Phase 3 complete: IntervalTimer, MetronomeEngine, TrainingViewModel |
 | 2026-01-28 | 1.4 | Phase 4 complete: Music integration (Apple Music, Spotify, UnifiedController) |
 | 2026-01-28 | 1.5 | **M1 COMPLETE**: Functional HomeView, plan templates, simulated HR, navigation to TrainingView |
+| 2026-01-29 | 1.6 | Fixed navigation bug (blank screen on plan selection), created Core Data model |
+| 2026-01-29 | 1.7 | Added progressive workout support with WorkBlock model |
+| 2026-01-29 | 1.8 | Created "Recomendado" plan: pyramid 160→170→180 BPM, 2 series, warmup/cooldown |
+| 2026-01-29 | 1.9 | Fixed simulator support: graceful HealthKit/Bluetooth fallback, Apple Music deferred auth |
 
 ---
 
-*Last updated: 2026-01-28*
+*Last updated: 2026-01-29*
 *Next review: Weekly*

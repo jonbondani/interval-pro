@@ -161,7 +161,7 @@ OBJETIVO 2: Maximizar integración con ecosistema runner
 | US-101 | Como corredor, quiero configurar intervalos por zonas de BPM para entrenar en la intensidad correcta | - Selección de zona trabajo: 160/170/180 BPM<br>- Selección zona descanso: 150 BPM<br>- Duración configurable (default 3 min)<br>- Validación de rangos | P0 |
 | US-102 | Como corredor, quiero definir el número de series para adaptar el entrenamiento a mi nivel | - Mínimo 2 series<br>- Máximo 20 series<br>- Incrementos de 1<br>- Tiempo total estimado visible | P0 |
 | US-103 | Como corredor, quiero guardar planes personalizados para reutilizarlos | - Nombre personalizado<br>- Hasta 10 planes guardados (free)<br>- Ilimitados (premium)<br>- Edición y eliminación | P1 |
-| US-104 | Como corredor, quiero planes predefinidos para empezar rápidamente | - 3 planes: Principiante, Intermedio, Avanzado<br>- Descripción de cada plan<br>- Quick start en 1 tap | P1 |
+| US-104 | Como corredor, quiero planes predefinidos para empezar rápidamente | - 4 planes: Recomendado (pirámide progresiva), Principiante, Intermedio, Avanzado<br>- **Plan Recomendado**: 5min warmup@150 + 2 series de (3min@160 + 3min@170 + 3min@180 con descansos@150) + 5min cooldown = 46min<br>- Descripción de cada plan<br>- Quick start en 1 tap | P1 |
 
 ### 5.2 Epic 2: Integración Garmin Fenix
 
@@ -1055,6 +1055,7 @@ B   ─────┼────────┼────────┼─�
 | Versión | Fecha | Cambios |
 |---------|-------|---------|
 | 1.0 | 2026-01-27 | Versión inicial del PRD |
+| 1.1 | 2026-01-29 | Añadido plan "Recomendado" con pirámide progresiva 160→170→180 BPM |
 
 ---
 

@@ -487,10 +487,14 @@ do {
 |------|---------|
 | `GarminManager.swift` | BLE connection, HR stream |
 | `HealthKitManager.swift` | HealthKit queries/writes |
+| `HRDataService.swift` | Unified HR source (Garmin/HealthKit/Simulation) |
 | `MetronomeEngine.swift` | Audio playback, mixing |
-| `IntervalTimer.swift` | Work/rest phase logic |
+| `IntervalTimer.swift` | Work/rest phase logic, progressive blocks |
 | `TrainingViewModel.swift` | Active session state |
+| `TrainingPlan.swift` | Plan model with `WorkBlock[]` for progressive workouts |
 | `SessionRepository.swift` | CoreData CRUD |
+| `UnifiedMusicController.swift` | Apple Music / Spotify integration |
+| `IntervalPro.xcdatamodeld` | Core Data model |
 
 ### Common Commands
 
@@ -526,3 +530,4 @@ SPOTIFY_REDIRECT_URI=intervalpro://callback
 | Version | Date | Changes |
 |---------|------|---------|
 | 1.0 | 2026-01-27 | Initial CLAUDE.md |
+| 1.1 | 2026-01-29 | Added WorkBlock model for progressive workouts, updated key files |
