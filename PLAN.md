@@ -633,13 +633,14 @@ Total: 46 minutes
   - **Subtasks:**
     - [x] Add Spotify SDK via SPM
     - [x] Configure redirect URI
-    - [x] Implement OAuth flow
-    - [x] Store tokens in Keychain
+    - [x] ~~Implement OAuth flow~~ No longer needed
+    - [x] ~~Store tokens in Keychain~~ No longer needed
   - **Acceptance Criteria:**
-    - Spotify login works
-    - Tokens persist and refresh
+    - Spotify ~~login~~ detection works
+    - ~~Tokens persist and refresh~~ Uses system controls
   - **Dependencies:** 1.2.1
-  - **Completed:** 2026-01-28 - Created SpotifyController.swift with OAuth flow
+  - **Completed:** 2026-01-28 - Created SpotifyController.swift
+  - **Updated:** 2026-01-30 - Removed OAuth, uses MPNowPlayingInfoCenter for detection and URL schemes for control
 
 - [x] **4.2.2** Implement Spotify playback control
   - **Hours:** 8h
@@ -653,6 +654,7 @@ Total: 46 minutes
     - Shows album art and track
   - **Dependencies:** 4.2.1
   - **Completed:** 2026-01-28 - SpotifyController with AppRemote integration
+  - **Updated:** 2026-01-30 - Rewritten to use MPNowPlayingInfoCenter + URL schemes (no SDK auth)
 
 ### 4.3 Unified Music Controller
 
@@ -668,6 +670,7 @@ Total: 46 minutes
     - Seamless switching
   - **Dependencies:** 4.1.2, 4.2.2
   - **Completed:** 2026-01-28 - Created UnifiedMusicController.swift
+  - **Updated:** 2026-01-30 - Spotify set as default, auto-detection improved, bindings simplified
 
 - [x] **4.3.2** Create mini player UI component
   - **Hours:** 6h
@@ -1228,8 +1231,65 @@ Phase 1 ──┬──> Phase 2 ──┬──> Phase 3 ──> Phase 4
 | 2026-01-29 | 1.7 | Added progressive workout support with WorkBlock model |
 | 2026-01-29 | 1.8 | Created "Recomendado" plan: pyramid 160→170→180 BPM, 2 series, warmup/cooldown |
 | 2026-01-29 | 1.9 | Fixed simulator support: graceful HealthKit/Bluetooth fallback, Apple Music deferred auth |
+| 2026-01-30 | 2.0 | **Music Widget Major Update**: Spotify as default, auto-detection of active music app |
+| 2026-01-30 | 2.1 | SpotifyController rewritten: uses MPNowPlayingInfoCenter + URL schemes (no SDK auth needed) |
+| 2026-01-30 | 2.2 | Added pace comparison vs best record feature in TrainingView |
+| 2026-01-30 | 2.3 | UI compaction: smaller HR widget, metrics cards, and pace comparison for better layout |
 
 ---
 
-*Last updated: 2026-01-29*
+## Implementation Notes - Music Integration (v2.0+)
+
+### Spotify Controller Architecture
+
+The SpotifyController was completely rewritten to avoid SDK authentication issues:
+
+**Previous Approach (problematic):**
+- Required Spotify SDK OAuth with client_id
+- Complex token management
+- Failed when Spotify app was already authenticated
+
+**Current Approach (final):**
+- Uses `MPNowPlayingInfoCenter.default().nowPlayingInfo` for state detection ✅
+- Timer-based polling every 1 second for playback state updates ✅
+- Opens Spotify app for playback control (iOS limitation - no remote control API)
+- No credentials or SDK authentication required ✅
+
+**iOS Platform Limitation:**
+- URL schemes like `spotify:play`, `spotify:pause` do NOT exist
+- iOS sandboxing prevents apps from controlling other apps' playback
+- Only `spotify://` (open app) and content links work
+
+```swift
+// Key patterns used:
+// 1. State detection from MPNowPlayingInfoCenter (WORKS)
+let info = MPNowPlayingInfoCenter.default().nowPlayingInfo
+let rate = info?[MPNowPlayingInfoPropertyPlaybackRate] as? Double
+let isPlaying = rate ?? 0 > 0
+
+// 2. Playback control - Opens Spotify (only option without SDK)
+UIApplication.shared.open(URL(string: "spotify://")!)
+// For full in-app control, use Apple Music with MPMusicPlayerController
+```
+
+**User Experience:**
+- Spotify: Widget shows current track, controls open Spotify app
+- Apple Music: Full control without leaving the app
+
+### Music Service Priority
+
+1. **Default**: Spotify (when installed)
+2. **Fallback**: Apple Music (uses MPMusicPlayerController.systemMusicPlayer)
+3. **Detection**: Auto-detects which app is currently playing
+
+### Key Technical Decisions
+
+- `MPMusicPlayerController.systemMusicPlayer` only controls Apple Music, NOT external apps
+- External apps like Spotify require URL schemes for control
+- `MPNowPlayingInfoCenter` provides unified state across ALL music apps
+- Bindings only forward state from active service (no auto-switching to prevent conflicts)
+
+---
+
+*Last updated: 2026-01-30*
 *Next review: Weekly*

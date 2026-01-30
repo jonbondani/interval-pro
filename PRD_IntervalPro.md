@@ -930,7 +930,8 @@ B   ─────┼────────┼────────┼─�
 | SDK | Propósito | Licencia | Riesgo |
 |-----|-----------|----------|--------|
 | **Garmin Connect IQ SDK** | Comunicación reloj | Garmin License | Medio - API changes |
-| **Spotify iOS SDK** | Control playback | Spotify TOS | Bajo |
+| **~~Spotify iOS SDK~~** | ~~Control playback~~ | ~~Spotify TOS~~ | ~~Bajo~~ |
+| **Spotify URL Schemes + MPNowPlayingInfoCenter** | Control playback (sin SDK) | Sistema iOS | Muy Bajo |
 | **Firebase** | Analytics, Crash | Google TOS | Bajo |
 
 ### 11.3 Dependencias de Equipo
@@ -1056,6 +1057,50 @@ B   ─────┼────────┼────────┼─�
 |---------|-------|---------|
 | 1.0 | 2026-01-27 | Versión inicial del PRD |
 | 1.1 | 2026-01-29 | Añadido plan "Recomendado" con pirámide progresiva 160→170→180 BPM |
+| 1.2 | 2026-01-30 | Actualizada integración música: Spotify como servicio por defecto, control via URL schemes + MPNowPlayingInfoCenter |
+
+### Apéndice D: Notas Técnicas de Integración Musical
+
+#### Limitación de iOS: Control de Apps Externas
+
+**iOS no permite que una app controle la reproducción de otra app.** Esta es una limitación de la plataforma, no un bug.
+
+| Funcionalidad | Apple Music | Spotify |
+|---------------|-------------|---------|
+| Detectar estado (playing/paused) | ✅ Funciona | ✅ Funciona |
+| Obtener info (título, artista) | ✅ Funciona | ✅ Funciona |
+| Play/Pause/Skip desde nuestra app | ✅ Funciona | ❌ Abre Spotify |
+| Control de volumen | ✅ Sistema | ✅ Sistema |
+
+#### Implementación de Spotify
+
+| Componente | Tecnología | Propósito |
+|------------|------------|-----------|
+| **Detección de estado** | `MPNowPlayingInfoCenter` | Lee qué está sonando (título, artista, estado) |
+| **Control de reproducción** | Abrir app | `spotify://` abre Spotify para control manual |
+| **Actualización de estado** | Timer 1s | Polling periódico para detectar cambios |
+
+**Por qué NO usamos URL schemes de control:**
+- `spotify:play`, `spotify:pause`, etc. **no existen** - solo funcionan links de contenido
+- Spotify SDK requiere OAuth con client_id (credenciales que no tenemos)
+- iOS sandboxing impide control remoto entre apps
+
+**Experiencia de usuario:**
+- Widget muestra la canción actual de Spotify ✅
+- Al pulsar controles → se abre Spotify para controlar
+- Para control completo sin salir de la app → usar Apple Music
+
+#### Prioridad de Servicios
+
+1. **Spotify** (cuando está instalado) - servicio por defecto (mejor detección)
+2. **Apple Music** - control completo disponible
+
+#### Comparación en Tiempo Real vs Mejor Sesión
+
+Se muestra en TrainingView durante el entrenamiento:
+- Delta de ritmo (pace) vs mejor sesión comparable
+- Indicador visual (+/- segundos por km)
+- Color verde si va mejor, rojo si va peor
 
 ---
 

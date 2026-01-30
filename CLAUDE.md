@@ -493,7 +493,10 @@ do {
 | `TrainingViewModel.swift` | Active session state |
 | `TrainingPlan.swift` | Plan model with `WorkBlock[]` for progressive workouts |
 | `SessionRepository.swift` | CoreData CRUD |
-| `UnifiedMusicController.swift` | Apple Music / Spotify integration |
+| `UnifiedMusicController.swift` | Apple Music / Spotify integration, auto-detects active service |
+| `SpotifyController.swift` | Spotify state detection (MPNowPlayingInfoCenter) + control (URL schemes) |
+| `AppleMusicController.swift` | Apple Music control via MPMusicPlayerController.systemMusicPlayer |
+| `MusicControllerProtocol.swift` | Protocol abstraction for music services, default config |
 | `IntervalPro.xcdatamodeld` | Core Data model |
 
 ### Common Commands
@@ -525,9 +528,85 @@ SPOTIFY_REDIRECT_URI=intervalpro://callback
 
 ---
 
+---
+
+## Music Integration Patterns
+
+### External Music App Control (Spotify)
+
+```swift
+// IMPORTANT: iOS does NOT allow apps to remotely control other apps' playback
+// This is a platform limitation, not a bug
+
+// WHAT WORKS:
+// 1. State Detection - MPNowPlayingInfoCenter reads from ANY music app
+let info = MPNowPlayingInfoCenter.default().nowPlayingInfo
+let isPlaying = (info?[MPNowPlayingInfoPropertyPlaybackRate] as? Double ?? 0) > 0
+let title = info?[MPMediaItemPropertyTitle] as? String
+let artist = info?[MPMediaItemPropertyArtist] as? String
+
+// 2. Timer-based polling for state updates
+Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
+    self.updateFromNowPlayingInfoCenter()
+}
+
+// WHAT DOES NOT WORK:
+// - spotify:play, spotify:pause, spotify:next - These URL schemes don't exist
+// - No public API to send playback commands to external apps
+// - Spotify SDK requires OAuth with client_id
+
+// SOLUTION:
+// For Spotify: Open the app, let user control there
+UIApplication.shared.open(URL(string: "spotify://")!)
+
+// For full in-app control: Use Apple Music
+MPMusicPlayerController.systemMusicPlayer.play()  // Only works with Apple Music
+```
+
+### Music Service Priority
+
+```swift
+// Default configuration prioritizes Spotify when installed
+static let `default` = MusicControllerConfig(
+    preferredService: .spotify,  // NOT .appleMusic
+    musicVolume: 0.7,
+    duckDuringAnnouncements: true,
+    duckingLevel: 0.3
+)
+
+// Detection flow in UnifiedMusicController:
+// 1. Check if Spotify is installed (canOpenURL spotify:)
+// 2. If yes, activate SpotifyController immediately in init
+// 3. If no, fall back to AppleMusicController
+// 4. Bindings only forward state from active service (no auto-switching)
+```
+
+### Key Technical Decisions & iOS Limitations
+
+| Feature | Apple Music | Spotify |
+|---------|-------------|---------|
+| **Detect playback state** | ✅ MPNowPlayingInfoCenter | ✅ MPNowPlayingInfoCenter |
+| **Get track info** | ✅ MPNowPlayingInfoCenter | ✅ MPNowPlayingInfoCenter |
+| **Play/Pause/Skip** | ✅ MPMusicPlayerController | ❌ Opens Spotify app |
+| **Volume control** | ✅ System volume | ✅ System volume |
+
+**Why Spotify can't be controlled remotely:**
+- iOS sandboxing prevents apps from controlling other apps
+- Spotify SDK requires OAuth with client_id (we don't have credentials)
+- URL schemes like `spotify:play` don't exist (only content links work)
+- `MPMusicPlayerController.systemMusicPlayer` only controls Apple Music
+
+**Our approach:**
+- Spotify: Display-only mode with "open to control" behavior
+- Apple Music: Full control via MPMusicPlayerController
+- User choice: Can use either, but Apple Music has better integration
+
+---
+
 ## Changelog
 
 | Version | Date | Changes |
 |---------|------|---------|
 | 1.0 | 2026-01-27 | Initial CLAUDE.md |
 | 1.1 | 2026-01-29 | Added WorkBlock model for progressive workouts, updated key files |
+| 1.2 | 2026-01-30 | Added music integration patterns, documented iOS limitation for Spotify control |
