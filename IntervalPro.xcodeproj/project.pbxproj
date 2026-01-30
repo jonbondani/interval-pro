@@ -514,7 +514,6 @@
 				LastUpgradeCheck = 1500;
 				TargetAttributes = {
 					1E64544C0A165CA2F63403F0 = {
-						DevelopmentTeam = "";
 						ProvisioningStyle = Automatic;
 					};
 					3B982C8B6A2030949CAD2A85 = {
@@ -654,6 +653,7 @@
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = IntervalPro/IntervalPro.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
+				DEVELOPMENT_TEAM = SMU9256WVS;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = IntervalPro/Resources/Info.plist;
@@ -779,6 +779,7 @@
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = IntervalPro/IntervalPro.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
+				DEVELOPMENT_TEAM = SMU9256WVS;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = IntervalPro/Resources/Info.plist;
