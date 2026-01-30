@@ -109,34 +109,40 @@ final class AppleMusicController: MusicControllerProtocol {
     func requestAuthorization() async throws {
         logger.info("Requesting MusicKit authorization")
 
-        let status = await MusicAuthorization.request()
-        authorizationStatus = status
+        // Try MusicKit authorization, but don't fail completely if it doesn't work
+        // We can still use MPMusicPlayerController for basic control
+        do {
+            let status = await MusicAuthorization.request()
+            authorizationStatus = status
 
-        switch status {
-        case .authorized:
-            isConnected = true
-            logger.info("MusicKit authorization granted")
-            setupObservers()  // Safe to access system player now
+            switch status {
+            case .authorized:
+                isConnected = true
+                logger.info("MusicKit authorization granted")
+                setupObservers()
+                return
 
-        case .denied:
-            isConnected = false
-            logger.warning("MusicKit authorization denied")
-            throw MusicError.authorizationDenied
+            case .denied:
+                logger.warning("MusicKit authorization denied - falling back to basic control")
 
-        case .restricted:
-            isConnected = false
-            logger.warning("MusicKit access restricted")
-            throw MusicError.notAuthorized
+            case .restricted:
+                logger.warning("MusicKit access restricted - falling back to basic control")
 
-        case .notDetermined:
-            isConnected = false
-            logger.warning("MusicKit authorization not determined")
-            throw MusicError.notAuthorized
+            case .notDetermined:
+                logger.warning("MusicKit authorization not determined - falling back to basic control")
 
-        @unknown default:
-            isConnected = false
-            throw MusicError.serviceUnavailable
+            @unknown default:
+                logger.warning("Unknown MusicKit status - falling back to basic control")
+            }
+        } catch {
+            logger.warning("MusicKit authorization failed: \(error) - falling back to basic control")
         }
+
+        // Even without full MusicKit authorization, we can use system player for basic control
+        // This allows play/pause/skip to work with whatever music app is active
+        isConnected = true
+        setupObservers()
+        logger.info("Apple Music controller ready (basic mode)")
     }
 
     // MARK: - Playback Control

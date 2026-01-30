@@ -5,6 +5,7 @@ import SwiftUI
 struct TrainingView: View {
     @StateObject private var viewModel: TrainingViewModel
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.openURL) private var openURL
 
     let plan: TrainingPlan
 
@@ -23,14 +24,22 @@ struct TrainingView: View {
                     // Top bar
                     topBar
 
+                    // Music widget
+                    if viewModel.isMusicConnected {
+                        musicWidget
+                            .padding(.horizontal)
+                            .padding(.top, DesignTokens.Spacing.sm)
+                    }
+
                     Spacer()
 
                     // Main content
-                    VStack(spacing: DesignTokens.Spacing.lg) {
+                    VStack(spacing: DesignTokens.Spacing.md) {
                         phaseIndicator
                         timerDisplay
                         heartRateDisplay
                         metricsRow
+                        paceComparisonSection
                         seriesProgress
                     }
                     .padding(.horizontal)
@@ -105,6 +114,95 @@ struct TrainingView: View {
         .padding(.top, 60)
     }
 
+    // MARK: - Music Widget
+    private var musicWidget: some View {
+        HStack(spacing: DesignTokens.Spacing.md) {
+            // Album art or music icon
+            Group {
+                if let track = viewModel.nowPlayingTrack,
+                   let artworkData = track.artworkData,
+                   let image = Image(data: artworkData) {
+                    image
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                } else {
+                    Image(systemName: viewModel.activeService.iconName)
+                        .font(.title2)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .frame(width: 44, height: 44)
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+            .background(Color(.tertiarySystemBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+
+            // Track info
+            VStack(alignment: .leading, spacing: 2) {
+                if let track = viewModel.nowPlayingTrack {
+                    Text(track.title)
+                        .font(.subheadline.weight(.medium))
+                        .lineLimit(1)
+
+                    Text(track.artist)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                } else {
+                    Text("Sin reproducción")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            Spacer()
+
+            // Playback controls
+            HStack(spacing: DesignTokens.Spacing.sm) {
+                Button {
+                    Task { await viewModel.skipToPreviousTrack() }
+                } label: {
+                    Image(systemName: "backward.fill")
+                        .font(.body)
+                        .foregroundStyle(.primary)
+                }
+                .accessibleTapTarget()
+
+                Button {
+                    Task { await viewModel.togglePlayPause() }
+                } label: {
+                    Image(systemName: viewModel.musicPlaybackState.isPlaying ? "pause.fill" : "play.fill")
+                        .font(.title3)
+                        .foregroundStyle(.primary)
+                }
+                .accessibleTapTarget()
+
+                Button {
+                    Task { await viewModel.skipToNextTrack() }
+                } label: {
+                    Image(systemName: "forward.fill")
+                        .font(.body)
+                        .foregroundStyle(.primary)
+                }
+                .accessibleTapTarget()
+
+                // Open music app button
+                Button {
+                    if let url = viewModel.musicAppURL {
+                        openURL(url)
+                    }
+                } label: {
+                    Image(systemName: "arrow.up.right.square")
+                        .font(.body)
+                        .foregroundStyle(.secondary)
+                }
+                .accessibleTapTarget()
+            }
+        }
+        .padding(DesignTokens.Spacing.sm)
+        .background(Color(.secondarySystemBackground).opacity(0.8))
+        .clipShape(RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.medium))
+    }
+
     // MARK: - Phase Indicator
     private var phaseIndicator: some View {
         HStack(spacing: DesignTokens.Spacing.sm) {
@@ -148,36 +246,40 @@ struct TrainingView: View {
 
     // MARK: - Heart Rate Display
     private var heartRateDisplay: some View {
-        VStack(spacing: DesignTokens.Spacing.xs) {
+        VStack(spacing: DesignTokens.Spacing.xxs) {
             HStack(alignment: .firstTextBaseline, spacing: DesignTokens.Spacing.xs) {
                 Image(systemName: "heart.fill")
-                    .font(.title)
+                    .font(.title3)
                     .foregroundStyle(.red)
                     .symbolEffect(.pulse, options: .repeating, value: viewModel.currentHeartRate)
 
                 Text("\(viewModel.currentHeartRate)")
-                    .font(DesignTokens.Typography.hrDisplay)
+                    .font(.system(size: 44, weight: .bold, design: .rounded))
                     .contentTransition(.numericText())
 
                 Text("BPM")
-                    .font(.title2)
+                    .font(.callout)
                     .foregroundStyle(.secondary)
             }
 
-            // Zone indicator
+            // Zone indicator - compact
             HRZoneBar(
                 currentHR: viewModel.currentHeartRate,
                 targetZone: viewModel.targetZone,
                 status: viewModel.zoneStatus
             )
-            .padding(.horizontal, DesignTokens.Spacing.lg)
+            .frame(height: 18)
+            .padding(.horizontal, DesignTokens.Spacing.md)
 
             // Zone status text
             Text(viewModel.zoneStatus.instruction)
-                .font(.subheadline.weight(.medium))
+                .font(.caption.weight(.medium))
                 .foregroundStyle(viewModel.zoneStatus.color)
         }
-        .cardStyle()
+        .padding(.vertical, DesignTokens.Spacing.sm)
+        .padding(.horizontal, DesignTokens.Spacing.md)
+        .background(Color(.secondarySystemBackground))
+        .clipShape(RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.medium))
     }
 
     // MARK: - Metrics Row
@@ -194,6 +296,107 @@ struct TrainingView: View {
                 label: "DIST",
                 icon: "location"
             )
+        }
+    }
+
+    // MARK: - Pace Comparison Section
+    private var paceComparisonSection: some View {
+        HStack(spacing: DesignTokens.Spacing.sm) {
+            // Best pace to beat
+            VStack(spacing: 2) {
+                Text("RÉCORD")
+                    .font(.system(size: 9, weight: .medium))
+                    .foregroundStyle(.secondary)
+
+                if viewModel.bestPace > 0 {
+                    Text(viewModel.formattedBestPace)
+                        .font(.caption.monospacedDigit().bold())
+                        .foregroundStyle(.primary)
+                } else {
+                    Text("--:--")
+                        .font(.caption.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            Divider()
+                .frame(height: 24)
+
+            // Current vs best indicator
+            VStack(spacing: 2) {
+                Text("VS RÉCORD")
+                    .font(.system(size: 9, weight: .medium))
+                    .foregroundStyle(.secondary)
+
+                HStack(spacing: 2) {
+                    if viewModel.bestPace > 0 && viewModel.currentPace > 0 {
+                        Image(systemName: paceComparisonIcon)
+                            .font(.system(size: 10))
+                            .foregroundStyle(paceComparisonColor)
+
+                        Text(viewModel.formattedPaceDelta)
+                            .font(.caption.monospacedDigit().bold())
+                            .foregroundStyle(paceComparisonColor)
+                    } else {
+                        Text("--:--")
+                            .font(.caption.monospacedDigit())
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+
+            Divider()
+                .frame(height: 24)
+
+            // Status indicator
+            VStack(spacing: 2) {
+                Text("ESTADO")
+                    .font(.system(size: 9, weight: .medium))
+                    .foregroundStyle(.secondary)
+
+                Text(paceStatusText)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(paceComparisonColor)
+            }
+        }
+        .padding(.vertical, DesignTokens.Spacing.xs)
+        .padding(.horizontal, DesignTokens.Spacing.sm)
+        .frame(maxWidth: .infinity)
+        .background(Color(.secondarySystemBackground))
+        .clipShape(RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.small))
+    }
+
+    private var paceComparisonIcon: String {
+        if viewModel.isFasterThanBest {
+            return "arrow.up.circle.fill"
+        } else if viewModel.isSlowerThanBest {
+            return "arrow.down.circle.fill"
+        } else {
+            return "equal.circle.fill"
+        }
+    }
+
+    private var paceComparisonColor: Color {
+        if viewModel.isFasterThanBest {
+            return .green
+        } else if viewModel.isSlowerThanBest {
+            return .red
+        } else {
+            return .orange
+        }
+    }
+
+    private var paceStatusText: String {
+        guard viewModel.bestPace > 0 && viewModel.currentPace > 0 else {
+            return "Sin datos"
+        }
+
+        if viewModel.isFasterThanBest {
+            return "Mejor"
+        } else if viewModel.isSlowerThanBest {
+            return "Por debajo"
+        } else {
+            return "En ritmo"
         }
     }
 
@@ -310,7 +513,7 @@ struct HRZoneBar: View {
         GeometryReader { geo in
             ZStack(alignment: .leading) {
                 // Background
-                RoundedRectangle(cornerRadius: 8)
+                RoundedRectangle(cornerRadius: 6)
                     .fill(Color.gray.opacity(0.2))
 
                 // Zone indicators
@@ -319,7 +522,7 @@ struct HRZoneBar: View {
                     let maxPos = hrPosition(zone.maxBPM, in: geo.size.width)
 
                     // Target zone highlight
-                    RoundedRectangle(cornerRadius: 8)
+                    RoundedRectangle(cornerRadius: 6)
                         .fill(Color.green.opacity(0.3))
                         .frame(width: maxPos - minPos)
                         .offset(x: minPos)
@@ -328,13 +531,13 @@ struct HRZoneBar: View {
                     let hrPos = hrPosition(currentHR, in: geo.size.width)
                     Circle()
                         .fill(status.color)
-                        .frame(width: 16, height: 16)
-                        .offset(x: hrPos - 8)
+                        .frame(width: 12, height: 12)
+                        .offset(x: hrPos - 6)
                         .animation(.spring(response: 0.3), value: currentHR)
                 }
             }
         }
-        .frame(height: 24)
+        .frame(height: 16)
     }
 
     private func hrPosition(_ hr: Int, in width: CGFloat) -> CGFloat {
@@ -353,13 +556,13 @@ struct MetricCard: View {
     let icon: String
 
     var body: some View {
-        VStack(spacing: DesignTokens.Spacing.xs) {
+        VStack(spacing: DesignTokens.Spacing.xxs) {
             Image(systemName: icon)
-                .font(.caption)
+                .font(.caption2)
                 .foregroundStyle(.secondary)
 
             Text(value)
-                .font(DesignTokens.Typography.paceDisplay)
+                .font(.system(size: 24, weight: .bold, design: .rounded))
                 .minimumScaleFactor(0.7)
 
             Text(label)
@@ -367,18 +570,37 @@ struct MetricCard: View {
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity)
-        .padding()
+        .padding(.vertical, DesignTokens.Spacing.sm)
+        .padding(.horizontal, DesignTokens.Spacing.sm)
         .background(Color(.secondarySystemBackground))
         .clipShape(RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.medium))
     }
 }
 
 // MARK: - Previews
-#Preview("Work Phase") {
+#Preview("Work Phase - Faster") {
     TrainingView(
         plan: .intermediate,
-        viewModel: TrainingViewModel.preview(phase: .work, hr: 168)
+        viewModel: TrainingViewModel.preview(
+            phase: .work,
+            hr: 168,
+            pace: 310,      // 5:10/km - faster than record
+            bestPace: 330   // 5:30/km
+        )
     )
+}
+
+#Preview("Work Phase - Slower") {
+    TrainingView(
+        plan: .intermediate,
+        viewModel: TrainingViewModel.preview(
+            phase: .work,
+            hr: 168,
+            pace: 360,      // 6:00/km - slower than record
+            bestPace: 330   // 5:30/km
+        )
+    )
+    .preferredColorScheme(.dark)
 }
 
 #Preview("Rest Phase") {
@@ -395,3 +617,17 @@ struct MetricCard: View {
         viewModel: TrainingViewModel.preview(phase: .idle, hr: 0)
     )
 }
+
+// MARK: - Image+Data Extension
+#if canImport(UIKit)
+import UIKit
+
+extension Image {
+    /// Creates an Image from raw data (PNG, JPEG, etc.)
+    /// Returns nil if the data cannot be converted to an image
+    init?(data: Data) {
+        guard let uiImage = UIImage(data: data) else { return nil }
+        self.init(uiImage: uiImage)
+    }
+}
+#endif

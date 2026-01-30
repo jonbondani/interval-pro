@@ -33,11 +33,18 @@ final class TrainingViewModel: ObservableObject {
     @Published var bestSession: TrainingSession?
     @Published var deltaVsBest: TimeInterval = 0
     @Published var isAheadOfBest: Bool = false
+    @Published var bestPace: Double = 0        // Best session avg pace (sec/km)
+    @Published var paceVsBest: Double = 0      // Current pace - best pace (negative = faster)
 
     // MARK: - Published State - Audio
     @Published var isMetronomeEnabled: Bool = true
     @Published var metronomeBPM: Int = 170
     @Published var isVoiceEnabled: Bool = true
+
+    // MARK: - Published State - Music
+    @Published var nowPlayingTrack: MusicTrack?
+    @Published var musicPlaybackState: MusicPlaybackState = .stopped
+    @Published var isMusicConnected: Bool = false
 
     // MARK: - Plan
     @Published var plan: TrainingPlan?
@@ -82,6 +89,42 @@ final class TrainingViewModel: ObservableObject {
 
     var isActive: Bool {
         timerState == .running || timerState == .paused
+    }
+
+    var formattedBestPace: String {
+        bestPace > 0 ? bestPace.formattedPace : "--:--"
+    }
+
+    /// Returns pace difference formatted with +/- sign (negative is faster/better)
+    var formattedPaceDelta: String {
+        guard bestPace > 0, currentPace > 0 else { return "--:--" }
+
+        let absDelta = abs(paceVsBest)
+        let minutes = Int(absDelta) / 60
+        let seconds = Int(absDelta) % 60
+
+        if paceVsBest < -5 {
+            // More than 5 seconds faster
+            return String(format: "-%d:%02d", minutes, seconds)
+        } else if paceVsBest > 5 {
+            // More than 5 seconds slower
+            return String(format: "+%d:%02d", minutes, seconds)
+        } else {
+            // Within 5 seconds - essentially on pace
+            return "0:00"
+        }
+    }
+
+    var isFasterThanBest: Bool {
+        paceVsBest < -5  // At least 5 sec/km faster
+    }
+
+    var isSlowerThanBest: Bool {
+        paceVsBest > 5  // At least 5 sec/km slower
+    }
+
+    var activeService: MusicServiceType {
+        musicController.activeService
     }
 
     // MARK: - Init
@@ -180,6 +223,35 @@ final class TrainingViewModel: ObservableObject {
                 return 1.0 - (remaining / duration)
             }
             .assign(to: &$phaseProgress)
+
+        // Music controller bindings
+        musicController.$playbackState
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] state in
+                self?.musicPlaybackState = state
+            }
+            .store(in: &cancellables)
+
+        musicController.$nowPlaying
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] track in
+                self?.nowPlayingTrack = track
+            }
+            .store(in: &cancellables)
+
+        musicController.$isConnected
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] connected in
+                self?.isMusicConnected = connected
+            }
+            .store(in: &cancellables)
+
+        // Pace comparison with best session
+        hrDataService.$currentPace
+            .sink { [weak self] pace in
+                self?.updatePaceComparison(currentPace: pace)
+            }
+            .store(in: &cancellables)
     }
 
     private func setupTimerCallbacks() {
@@ -216,6 +288,9 @@ final class TrainingViewModel: ObservableObject {
 
         // Load best session for comparison
         bestSession = try? await sessionRepository.fetchBest(forPlanId: plan.id)
+
+        // Detect and connect to music service
+        await musicController.detectActiveService()
 
         Log.training.info("Training configured: \(plan.name)")
     }
@@ -561,6 +636,52 @@ final class TrainingViewModel: ObservableObject {
         metronomeBPM = bpm
         audioEngine.updateMetronomeBPM(bpm)
     }
+
+    // MARK: - Music Controls
+    func togglePlayPause() async {
+        await musicController.togglePlayPause()
+    }
+
+    func skipToNextTrack() async {
+        await musicController.skipToNext()
+    }
+
+    func skipToPreviousTrack() async {
+        await musicController.skipToPrevious()
+    }
+
+    /// Returns the URL for the active music service app
+    var musicAppURL: URL? {
+        let urlString: String
+        switch musicController.activeService {
+        case .appleMusic:
+            urlString = "music://"
+        case .spotify:
+            urlString = "spotify://"
+        case .none:
+            urlString = "music://"  // Default to Apple Music
+        }
+        return URL(string: urlString)
+    }
+
+    // MARK: - Pace Comparison
+    private func updatePaceComparison(currentPace: Double) {
+        guard currentPace > 0 else {
+            paceVsBest = 0
+            return
+        }
+
+        // If we have a best session with pace data, compare
+        if let best = bestSession, let bestAvgPace = best.avgPace, bestAvgPace > 0 {
+            bestPace = bestAvgPace
+            // Negative means current is faster (better)
+            paceVsBest = currentPace - bestAvgPace
+        } else {
+            // No previous record, current becomes the baseline
+            bestPace = 0
+            paceVsBest = 0
+        }
+    }
 }
 
 // MARK: - Preview Helpers
@@ -569,7 +690,9 @@ extension TrainingViewModel {
         phase: IntervalPhase = .work,
         hr: Int = 168,
         series: Int = 2,
-        totalSeries: Int = 4
+        totalSeries: Int = 4,
+        pace: Double = 330,  // 5:30/km
+        bestPace: Double = 320  // 5:20/km
     ) -> TrainingViewModel {
         let vm = TrainingViewModel(
             garminManager: MockGarminManager(),
@@ -585,6 +708,19 @@ extension TrainingViewModel {
         vm.phaseRemainingTime = 90
         vm.phaseProgress = 0.5
         vm.zoneStatus = .inZone
+        vm.currentPace = pace
+        vm.bestPace = bestPace
+        vm.paceVsBest = pace - bestPace
+
+        // Preview music state
+        vm.nowPlayingTrack = MusicTrack(
+            id: "preview",
+            title: "Running Motivation",
+            artist: "Workout Mix",
+            duration: 210
+        )
+        vm.musicPlaybackState = .playing
+        vm.isMusicConnected = true
 
         return vm
     }

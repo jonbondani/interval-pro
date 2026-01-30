@@ -164,7 +164,7 @@ struct MusicControllerConfig: Codable, Equatable {
     var duckingLevel: Float // Volume reduction (0.0-1.0, lower = more reduction)
 
     static let `default` = MusicControllerConfig(
-        preferredService: .appleMusic,
+        preferredService: .spotify,
         musicVolume: 0.7,
         duckDuringAnnouncements: true,
         duckingLevel: 0.3

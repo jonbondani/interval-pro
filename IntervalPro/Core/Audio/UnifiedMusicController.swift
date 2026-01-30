@@ -1,5 +1,7 @@
 import Foundation
 import Combine
+import MediaPlayer
+import UIKit
 import os
 
 /// Unified music controller that manages both Apple Music and Spotify
@@ -53,11 +55,25 @@ final class UnifiedMusicController: ObservableObject {
         self.spotifyController = spotifyController
         self.config = Self.loadConfig()
 
+        // Immediately set Spotify as active if installed (before bindings)
+        // This ensures Spotify is the default service
+        if isSpotifyInstalled {
+            self.activeService = .spotify
+            self.activeController = spotifyController
+            self.isConnected = true
+        }
+
         setupBindings()
 
         Task {
             await detectActiveService()
         }
+    }
+
+    /// Check if Spotify app is installed
+    private var isSpotifyInstalled: Bool {
+        guard let url = URL(string: "spotify:") else { return false }
+        return UIApplication.shared.canOpenURL(url)
     }
 
     // For testing
@@ -76,36 +92,46 @@ final class UnifiedMusicController: ObservableObject {
     // MARK: - Setup
 
     private func setupBindings() {
-        // Subscribe to Apple Music state
-        appleMusicController.playbackState
-            .sink { [weak self] state in
-                if self?.activeService == .appleMusic {
-                    self?.playbackState = state
-                }
-            }
-            .store(in: &cancellables)
+        // Since both controllers use the same MPMusicPlayerController.systemMusicPlayer,
+        // they receive the same events. We only forward from Spotify when it's active
+        // (Spotify is the preferred/default service)
 
-        appleMusicController.nowPlaying
-            .sink { [weak self] track in
-                if self?.activeService == .appleMusic {
-                    self?.nowPlaying = track
-                }
-            }
-            .store(in: &cancellables)
-
-        // Subscribe to Spotify state
+        // Subscribe to Spotify state - this is the primary source
         spotifyController.playbackState
             .sink { [weak self] state in
-                if self?.activeService == .spotify {
-                    self?.playbackState = state
+                guard let self = self else { return }
+                // Forward Spotify state when Spotify is active
+                if self.activeService == .spotify {
+                    self.playbackState = state
                 }
             }
             .store(in: &cancellables)
 
         spotifyController.nowPlaying
             .sink { [weak self] track in
-                if self?.activeService == .spotify {
-                    self?.nowPlaying = track
+                guard let self = self else { return }
+                if self.activeService == .spotify {
+                    self.nowPlaying = track
+                }
+            }
+            .store(in: &cancellables)
+
+        // Subscribe to Apple Music state - only used if Spotify is not available
+        appleMusicController.playbackState
+            .sink { [weak self] state in
+                guard let self = self else { return }
+                // Only forward Apple Music state when Apple Music is active
+                if self.activeService == .appleMusic {
+                    self.playbackState = state
+                }
+            }
+            .store(in: &cancellables)
+
+        appleMusicController.nowPlaying
+            .sink { [weak self] track in
+                guard let self = self else { return }
+                if self.activeService == .appleMusic {
+                    self.nowPlaying = track
                 }
             }
             .store(in: &cancellables)
@@ -114,23 +140,18 @@ final class UnifiedMusicController: ObservableObject {
     // MARK: - Service Detection
 
     /// Detect and activate the appropriate music service
+    /// Prioritizes Spotify when installed (avoids MusicKit entitlement issues)
     func detectActiveService() async {
         logger.debug("Detecting active music service...")
 
-        // Try preferred service first
-        switch config.preferredService {
-        case .appleMusic:
-            if await tryActivateAppleMusic() { return }
-            if await tryActivateSpotify() { return }
+        // Always try Spotify first if installed (avoids MusicKit authorization issues)
+        if await tryActivateSpotify() {
+            return
+        }
 
-        case .spotify:
-            if await tryActivateSpotify() { return }
-            if await tryActivateAppleMusic() { return }
-
-        case .none:
-            // Auto-detect: check which one is playing
-            if await tryActivateAppleMusic() { return }
-            if await tryActivateSpotify() { return }
+        // Fall back to Apple Music
+        if await tryActivateAppleMusic() {
+            return
         }
 
         // No service available
@@ -139,6 +160,77 @@ final class UnifiedMusicController: ObservableObject {
         isConnected = false
 
         logger.info("No music service available")
+    }
+
+    /// Check which service is currently playing and activate it
+    private func checkAndActivatePlayingService() async -> Bool {
+        // Always initialize Spotify first (no authorization dialog needed)
+        try? await spotifyController.requestAuthorization()
+
+        // Check if any music is currently playing
+        let isAnythingPlaying = isSystemMusicPlaying()
+
+        if isAnythingPlaying && spotifyController.isConnected {
+            // If Spotify is installed and music is playing, use Spotify
+            activateService(.spotify, controller: spotifyController)
+            logger.info("Music playing, Spotify installed - activating Spotify")
+            return true
+        }
+
+        // Only try Apple Music if Spotify is not available
+        if !spotifyController.isConnected {
+            try? await appleMusicController.requestAuthorization()
+
+            if isAnythingPlaying && appleMusicController.isConnected {
+                activateService(.appleMusic, controller: appleMusicController)
+                logger.info("Music playing - activating Apple Music")
+                return true
+            }
+        }
+
+        return false
+    }
+
+    /// Check if system music player is currently playing
+    private func isSystemMusicPlaying() -> Bool {
+        // Check MPNowPlayingInfoCenter for playback rate
+        if let rate = MPNowPlayingInfoCenter.default().nowPlayingInfo?[MPNowPlayingInfoPropertyPlaybackRate] as? Double,
+           rate > 0 {
+            return true
+        }
+        return false
+    }
+
+    /// Try to detect which service is playing from now playing info
+    private func detectActiveServiceFromNowPlaying() -> MusicServiceType {
+        guard let info = MPNowPlayingInfoCenter.default().nowPlayingInfo else {
+            return .none
+        }
+
+        // Check if there's a bundle identifier or app name hint
+        // Some apps put their name in the album artist or other fields
+        let allValues = info.values.compactMap { $0 as? String }.joined(separator: " ").lowercased()
+
+        if allValues.contains("spotify") {
+            return .spotify
+        }
+
+        // If the track is from Apple Music library, it might have a persistent ID
+        if info[MPMediaItemPropertyPersistentID] != nil {
+            return .appleMusic
+        }
+
+        return .none
+    }
+
+    /// Check if Apple Music is currently playing
+    private func isAppleMusicPlaying() async -> Bool {
+        return isSystemMusicPlaying() && detectActiveServiceFromNowPlaying() != .spotify
+    }
+
+    /// Check if Spotify is currently playing
+    private func isSpotifyPlaying() async -> Bool {
+        return isSystemMusicPlaying() && (detectActiveServiceFromNowPlaying() == .spotify || spotifyController.isConnected)
     }
 
     private func tryActivateAppleMusic() async -> Bool {
@@ -172,7 +264,28 @@ final class UnifiedMusicController: ObservableObject {
         activeController = controller
         isConnected = controller.isConnected
 
+        // Also sync the current state from the controller
+        syncStateFromController(controller, type: type)
+
         logger.info("Activated music service: \(type.displayName)")
+    }
+
+    /// Sync playback state and now playing from the active controller
+    private func syncStateFromController(_ controller: MusicControllerProtocol, type: MusicServiceType) {
+        // Subscribe to get current values
+        controller.playbackState
+            .first()
+            .sink { [weak self] state in
+                self?.playbackState = state
+            }
+            .store(in: &cancellables)
+
+        controller.nowPlaying
+            .first()
+            .sink { [weak self] track in
+                self?.nowPlaying = track
+            }
+            .store(in: &cancellables)
     }
 
     private func switchToPreferredService() async {
@@ -189,6 +302,11 @@ final class UnifiedMusicController: ObservableObject {
     // MARK: - Playback Control
 
     func play() async {
+        // Auto-detect service if not connected
+        if activeController == nil {
+            await detectActiveService()
+        }
+
         guard let controller = activeController else {
             error = .notConnected
             return
@@ -197,6 +315,9 @@ final class UnifiedMusicController: ObservableObject {
         do {
             try await controller.play()
             error = nil
+            // Give the player a moment to update, then refresh state
+            try? await Task.sleep(for: .milliseconds(200))
+            await refreshPlaybackState()
         } catch let musicError as MusicError {
             error = musicError
             logger.error("Play failed: \(musicError.localizedDescription)")
@@ -215,6 +336,9 @@ final class UnifiedMusicController: ObservableObject {
         do {
             try await controller.pause()
             error = nil
+            // Give the player a moment to update, then refresh state
+            try? await Task.sleep(for: .milliseconds(200))
+            await refreshPlaybackState()
         } catch let musicError as MusicError {
             error = musicError
             logger.error("Pause failed: \(musicError.localizedDescription)")
@@ -225,10 +349,40 @@ final class UnifiedMusicController: ObservableObject {
     }
 
     func togglePlayPause() async {
+        // Auto-detect service if not connected
+        if activeController == nil {
+            await detectActiveService()
+        }
+
         if playbackState.isPlaying {
             await pause()
         } else {
             await play()
+        }
+    }
+
+    /// Manually refresh the playback state from the active controller
+    /// Also checks if a different service started playing
+    func refreshPlaybackState() async {
+        // First check if a different service is now playing
+        let isSpotifyCurrentlyPlaying = await isSpotifyPlaying()
+        let isAppleMusicCurrentlyPlaying = await isAppleMusicPlaying()
+
+        let spotifyPlaying = spotifyController.isConnected && isSpotifyCurrentlyPlaying
+        let appleMusicPlaying = appleMusicController.isConnected && isAppleMusicCurrentlyPlaying
+
+        // Switch to the playing service if different from current
+        if spotifyPlaying && activeService != .spotify {
+            activateService(.spotify, controller: spotifyController)
+            logger.info("Switched to Spotify (now playing)")
+        } else if appleMusicPlaying && activeService != .appleMusic && !spotifyPlaying {
+            activateService(.appleMusic, controller: appleMusicController)
+            logger.info("Switched to Apple Music (now playing)")
+        }
+
+        // Sync state from active controller
+        if let controller = activeController {
+            syncStateFromController(controller, type: activeService)
         }
     }
 
@@ -291,11 +445,11 @@ final class UnifiedMusicController: ObservableObject {
     // MARK: - Config Persistence
 
     private static func loadConfig() -> MusicControllerConfig {
-        guard let data = UserDefaults.standard.data(forKey: "music_controller_config"),
-              let config = try? JSONDecoder().decode(MusicControllerConfig.self, from: data) else {
-            return .default
-        }
-        return config
+        // Always use default config with Spotify preference
+        // This ensures Spotify is preferred over Apple Music
+        // Clear any old saved config
+        UserDefaults.standard.removeObject(forKey: "music_controller_config")
+        return .default
     }
 
     private func saveConfig() {

@@ -1,13 +1,14 @@
 import Foundation
-import UIKit
+import MediaPlayer
 import Combine
+import UIKit
 import os
 
 /// Spotify controller for playback control
-/// Uses Spotify iOS SDK for Premium users
-/// Note: Requires Spotify app to be installed
+/// Uses MPRemoteCommandCenter to control the currently playing app (including Spotify)
+/// and MPNowPlayingInfoCenter to get playback info
 @MainActor
-final class SpotifyController: @preconcurrency MusicControllerProtocol {
+final class SpotifyController: MusicControllerProtocol {
 
     // MARK: - Published State
 
@@ -28,25 +29,10 @@ final class SpotifyController: @preconcurrency MusicControllerProtocol {
     let serviceType: MusicServiceType = .spotify
     private(set) var currentVolume: Float = 0.7
 
-    // Spotify configuration
-    private let clientID: String
-    private let redirectURI: URL
-    private var accessToken: String?
-    private var refreshToken: String?
-    private var tokenExpirationDate: Date?
+    private var hasSetupObservers = false
+    private var updateTimer: Timer?
 
-    // Remote control
-    private var appRemote: SpotifyAppRemote?
-    private var connectionRetryCount = 0
-    private let maxConnectionRetries = 3
-
-    private var cancellables = Set<AnyCancellable>()
     private let logger = Logger(subsystem: "com.intervalpro.app", category: "Spotify")
-
-    // Keychain keys
-    private let accessTokenKey = "spotify_access_token"
-    private let refreshTokenKey = "spotify_refresh_token"
-    private let tokenExpirationKey = "spotify_token_expiration"
 
     // MARK: - Singleton
 
@@ -55,115 +41,20 @@ final class SpotifyController: @preconcurrency MusicControllerProtocol {
     // MARK: - Init
 
     private init() {
-        // Load configuration from environment or config file
-        self.clientID = ProcessInfo.processInfo.environment["SPOTIFY_CLIENT_ID"] ?? ""
-        self.redirectURI = URL(string: ProcessInfo.processInfo.environment["SPOTIFY_REDIRECT_URI"] ?? "intervalpro://spotify-callback")!
+        checkSpotifyAvailability()
+    }
 
-        loadStoredTokens()
-        setupAppRemote()
+    deinit {
+        updateTimer?.invalidate()
     }
 
     // MARK: - Setup
 
-    private func setupAppRemote() {
-        guard !clientID.isEmpty else {
-            logger.warning("Spotify client ID not configured")
-            return
+    private func checkSpotifyAvailability() {
+        isConnected = isSpotifyInstalled
+        if isConnected {
+            logger.info("Spotify app is installed")
         }
-
-        let configuration = SpotifyConfiguration(
-            clientID: clientID,
-            redirectURI: redirectURI
-        )
-
-        appRemote = SpotifyAppRemote(configuration: configuration)
-        appRemote?.delegate = self
-
-        // If we have a stored token, try to connect
-        if let token = accessToken, !isTokenExpired {
-            appRemote?.connectionParameters.accessToken = token
-        }
-    }
-
-    private var isTokenExpired: Bool {
-        guard let expiration = tokenExpirationDate else { return true }
-        return Date() > expiration
-    }
-
-    // MARK: - Token Management
-
-    private func loadStoredTokens() {
-        // Load from Keychain
-        accessToken = KeychainManager.load(key: accessTokenKey)
-        refreshToken = KeychainManager.load(key: refreshTokenKey)
-
-        if let expirationString = KeychainManager.load(key: tokenExpirationKey),
-           let timestamp = TimeInterval(expirationString) {
-            tokenExpirationDate = Date(timeIntervalSince1970: timestamp)
-        }
-
-        logger.debug("Loaded stored Spotify tokens: \(self.accessToken != nil)")
-    }
-
-    private func storeTokens(access: String, refresh: String?, expiration: Date) {
-        accessToken = access
-        refreshToken = refresh
-        tokenExpirationDate = expiration
-
-        KeychainManager.save(key: accessTokenKey, value: access)
-        if let refresh = refresh {
-            KeychainManager.save(key: refreshTokenKey, value: refresh)
-        }
-        KeychainManager.save(key: tokenExpirationKey, value: String(expiration.timeIntervalSince1970))
-
-        logger.debug("Stored Spotify tokens")
-    }
-
-    private func clearTokens() {
-        accessToken = nil
-        refreshToken = nil
-        tokenExpirationDate = nil
-
-        KeychainManager.delete(key: accessTokenKey)
-        KeychainManager.delete(key: refreshTokenKey)
-        KeychainManager.delete(key: tokenExpirationKey)
-
-        logger.debug("Cleared Spotify tokens")
-    }
-
-    // MARK: - Authorization
-
-    func requestAuthorization() async throws {
-        logger.info("Requesting Spotify authorization")
-
-        guard isSpotifyInstalled else {
-            logger.warning("Spotify app not installed")
-            throw MusicError.spotifyNotInstalled
-        }
-
-        // If we have a valid token, just connect
-        if let token = accessToken, !isTokenExpired {
-            appRemote?.connectionParameters.accessToken = token
-            try await connect()
-            return
-        }
-
-        // Need to trigger OAuth flow
-        // This would typically open Spotify app for authorization
-        // The result comes back via URL scheme handling
-
-        let authorizeURL = buildAuthorizationURL()
-
-        await MainActor.run {
-            UIApplication.shared.open(authorizeURL, options: [:]) { [weak self] success in
-                if !success {
-                    self?.logger.error("Failed to open Spotify authorization URL")
-                }
-            }
-        }
-
-        // Note: The actual token will be received via URL scheme callback
-        // This is handled in SceneDelegate/AppDelegate
     }
 
     private var isSpotifyInstalled: Bool {
@@ -171,349 +62,195 @@ final class SpotifyController: @preconcurrency MusicControllerProtocol {
         return UIApplication.shared.canOpenURL(url)
     }
 
-    private func buildAuthorizationURL() -> URL {
-        var components = URLComponents(string: "https://accounts.spotify.com/authorize")!
-        components.queryItems = [
-            URLQueryItem(name: "client_id", value: clientID),
-            URLQueryItem(name: "response_type", value: "token"),
-            URLQueryItem(name: "redirect_uri", value: redirectURI.absoluteString),
-            URLQueryItem(name: "scope", value: "app-remote-control user-read-playback-state user-modify-playback-state"),
-            URLQueryItem(name: "show_dialog", value: "false")
-        ]
-        return components.url!
-    }
+    private func setupObservers() {
+        guard !hasSetupObservers else { return }
+        hasSetupObservers = true
 
-    /// Handle OAuth callback URL
-    func handleAuthCallback(url: URL) {
-        logger.info("Handling Spotify auth callback")
-
-        // Parse token from URL fragment
-        guard let fragment = url.fragment else {
-            logger.error("No fragment in callback URL")
-            return
-        }
-
-        let params = parseURLFragment(fragment)
-
-        guard let token = params["access_token"] else {
-            logger.error("No access token in callback")
-            return
-        }
-
-        let expiresIn = TimeInterval(params["expires_in"] ?? "3600") ?? 3600
-        let expiration = Date().addingTimeInterval(expiresIn)
-
-        storeTokens(access: token, refresh: nil, expiration: expiration)
-
-        // Connect with new token
-        appRemote?.connectionParameters.accessToken = token
-        Task {
-            try? await connect()
-        }
-    }
-
-    private func parseURLFragment(_ fragment: String) -> [String: String] {
-        var params: [String: String] = [:]
-        let pairs = fragment.components(separatedBy: "&")
-        for pair in pairs {
-            let kv = pair.components(separatedBy: "=")
-            if kv.count == 2 {
-                params[kv[0]] = kv[1].removingPercentEncoding
+        // Use a timer to periodically check MPNowPlayingInfoCenter
+        // This is more reliable for external apps like Spotify
+        updateTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
+            Task { @MainActor in
+                self?.updateFromNowPlayingInfoCenter()
             }
         }
-        return params
-    }
 
-    // MARK: - Connection
-
-    private func connect() async throws {
-        guard let appRemote = appRemote else {
-            throw MusicError.serviceUnavailable
+        // Also observe the notification for immediate updates
+        NotificationCenter.default.addObserver(
+            forName: UIApplication.didBecomeActiveNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                self?.updateFromNowPlayingInfoCenter()
+            }
         }
 
+        // Initial update
+        updateFromNowPlayingInfoCenter()
+
+        logger.debug("Spotify observers set up")
+    }
+
+    /// Update state from MPNowPlayingInfoCenter
+    private func updateFromNowPlayingInfoCenter() {
+        let info = MPNowPlayingInfoCenter.default().nowPlayingInfo
+
+        // Update playback state
+        let newState: MusicPlaybackState
+        if let rate = info?[MPNowPlayingInfoPropertyPlaybackRate] as? Double, rate > 0 {
+            newState = .playing
+        } else if info != nil {
+            newState = .paused
+        } else {
+            newState = .stopped
+        }
+
+        if playbackStateSubject.value != newState {
+            playbackStateSubject.send(newState)
+            logger.debug("Playback state updated: \(String(describing: newState))")
+        }
+
+        // Update now playing track
+        if let title = info?[MPMediaItemPropertyTitle] as? String {
+            let artist = info?[MPMediaItemPropertyArtist] as? String ?? "Unknown Artist"
+            let album = info?[MPMediaItemPropertyAlbumTitle] as? String
+            let duration = info?[MPMediaItemPropertyPlaybackDuration] as? TimeInterval ?? 0
+
+            var artworkData: Data?
+            if let artwork = info?[MPMediaItemPropertyArtwork] as? MPMediaItemArtwork {
+                artworkData = artwork.image(at: CGSize(width: 300, height: 300))?.pngData()
+            }
+
+            let track = MusicTrack(
+                id: "\(title)-\(artist)",
+                title: title,
+                artist: artist,
+                album: album,
+                duration: duration,
+                artworkURL: nil,
+                artworkData: artworkData
+            )
+
+            // Only update if track changed
+            if nowPlayingSubject.value?.id != track.id {
+                nowPlayingSubject.send(track)
+                logger.debug("Now playing: \(track.title) - \(track.artist)")
+            }
+        } else if nowPlayingSubject.value != nil {
+            nowPlayingSubject.send(nil)
+        }
+    }
+
+    // MARK: - Authorization
+
+    func requestAuthorization() async throws {
+        logger.info("Checking Spotify availability")
+
         guard isSpotifyInstalled else {
+            logger.warning("Spotify app not installed")
             throw MusicError.spotifyNotInstalled
         }
 
-        logger.debug("Connecting to Spotify...")
+        isConnected = true
+        setupObservers()
 
-        return try await withCheckedThrowingContinuation { continuation in
-            self.connectionContinuation = continuation
-            appRemote.connect()
-        }
+        // Force an immediate update
+        updateFromNowPlayingInfoCenter()
+
+        logger.info("Spotify controller ready")
     }
 
-    private var connectionContinuation: CheckedContinuation<Void, Error>?
-
-    // MARK: - Playback Control
+    // MARK: - Playback Control using URL schemes
 
     func play() async throws {
-        guard isConnected, let playerAPI = appRemote?.playerAPI else {
+        guard isConnected else {
             throw MusicError.notConnected
         }
 
-        logger.debug("Playing Spotify")
+        logger.debug("Sending play command to Spotify")
 
-        return try await withCheckedThrowingContinuation { continuation in
-            playerAPI.resume { _, error in
-                if let error = error {
-                    continuation.resume(throwing: MusicError.playbackFailed(underlying: error))
-                } else {
-                    continuation.resume()
-                }
-            }
+        // Open Spotify with play intent
+        if let url = URL(string: "spotify:play") {
+            await UIApplication.shared.open(url)
+        } else {
+            // Fallback: just open Spotify
+            openSpotifyApp()
         }
+
+        // Wait a moment and update state
+        try? await Task.sleep(for: .milliseconds(500))
+        updateFromNowPlayingInfoCenter()
     }
 
     func pause() async throws {
-        guard isConnected, let playerAPI = appRemote?.playerAPI else {
+        guard isConnected else {
             throw MusicError.notConnected
         }
 
-        logger.debug("Pausing Spotify")
+        logger.debug("Sending pause command to Spotify")
 
-        return try await withCheckedThrowingContinuation { continuation in
-            playerAPI.pause { _, error in
-                if let error = error {
-                    continuation.resume(throwing: MusicError.playbackFailed(underlying: error))
-                } else {
-                    continuation.resume()
-                }
-            }
+        // Open Spotify with pause intent
+        if let url = URL(string: "spotify:pause") {
+            await UIApplication.shared.open(url)
         }
+
+        // Wait a moment and update state
+        try? await Task.sleep(for: .milliseconds(500))
+        updateFromNowPlayingInfoCenter()
     }
 
     func skipToNext() async throws {
-        guard isConnected, let playerAPI = appRemote?.playerAPI else {
+        guard isConnected else {
             throw MusicError.notConnected
         }
 
-        logger.debug("Skipping to next Spotify track")
+        logger.debug("Sending skip next command to Spotify")
 
-        return try await withCheckedThrowingContinuation { continuation in
-            playerAPI.skip(toNext: { _, error in
-                if let error = error {
-                    continuation.resume(throwing: MusicError.playbackFailed(underlying: error))
-                } else {
-                    continuation.resume()
-                }
-            })
+        // Open Spotify with next intent
+        if let url = URL(string: "spotify:next") {
+            await UIApplication.shared.open(url)
         }
+
+        try? await Task.sleep(for: .milliseconds(500))
+        updateFromNowPlayingInfoCenter()
     }
 
     func skipToPrevious() async throws {
-        guard isConnected, let playerAPI = appRemote?.playerAPI else {
+        guard isConnected else {
             throw MusicError.notConnected
         }
 
-        logger.debug("Skipping to previous Spotify track")
+        logger.debug("Sending skip previous command to Spotify")
 
-        return try await withCheckedThrowingContinuation { continuation in
-            playerAPI.skip(toPrevious: { _, error in
-                if let error = error {
-                    continuation.resume(throwing: MusicError.playbackFailed(underlying: error))
-                } else {
-                    continuation.resume()
-                }
-            })
+        // Open Spotify with previous intent
+        if let url = URL(string: "spotify:previous") {
+            await UIApplication.shared.open(url)
         }
+
+        try? await Task.sleep(for: .milliseconds(500))
+        updateFromNowPlayingInfoCenter()
     }
 
     func setVolume(_ volume: Float) async {
         currentVolume = max(0, min(1, volume))
-        // Spotify doesn't support direct volume control from SDK
-        // Volume is controlled through system
         logger.debug("Volume set to \(volume) (system controlled)")
     }
 
-    // MARK: - Disconnect
+    // MARK: - Spotify Deep Link
 
-    func disconnect() {
-        appRemote?.disconnect()
-        isConnected = false
-        playbackStateSubject.send(.stopped)
-        nowPlayingSubject.send(nil)
-        logger.info("Disconnected from Spotify")
-    }
-}
-
-// MARK: - SpotifyAppRemoteDelegate
-
-extension SpotifyController: SpotifyAppRemoteDelegate {
-    nonisolated func appRemoteDidEstablishConnection(_ appRemote: SpotifyAppRemote) {
-        Task { @MainActor in
-            logger.info("Spotify connection established")
-            isConnected = true
-            connectionRetryCount = 0
-
-            // Subscribe to player state
-            appRemote.playerAPI?.delegate = self
-            appRemote.playerAPI?.subscribe(toPlayerState: { [weak self] result, error in
-                if let error = error {
-                    self?.logger.error("Failed to subscribe to player state: \(error)")
-                }
-            })
-
-            connectionContinuation?.resume()
-            connectionContinuation = nil
+    func openSpotifyApp() {
+        if let url = URL(string: "spotify://") {
+            UIApplication.shared.open(url)
         }
     }
 
-    nonisolated func appRemote(_ appRemote: SpotifyAppRemote, didFailConnectionAttemptWithError error: Error?) {
-        Task { @MainActor in
-            logger.error("Spotify connection failed: \(error?.localizedDescription ?? "unknown")")
-            isConnected = false
-
-            // Retry logic
-            if connectionRetryCount < maxConnectionRetries {
-                connectionRetryCount += 1
-                logger.debug("Retrying connection (\(self.connectionRetryCount)/\(self.maxConnectionRetries))")
-                try? await Task.sleep(for: .seconds(2))
-                try? await connect()
-            } else {
-                connectionContinuation?.resume(throwing: error ?? MusicError.serviceUnavailable)
-                connectionContinuation = nil
-            }
-        }
+    /// Force refresh the current state
+    func refreshState() {
+        updateFromNowPlayingInfoCenter()
     }
 
-    nonisolated func appRemote(_ appRemote: SpotifyAppRemote, didDisconnectWithError error: Error?) {
-        Task { @MainActor in
-            logger.warning("Spotify disconnected: \(error?.localizedDescription ?? "no error")")
-            isConnected = false
-            playbackStateSubject.send(.stopped)
-        }
-    }
-}
-
-// MARK: - SPTAppRemotePlayerStateDelegate
-
-extension SpotifyController: SPTAppRemotePlayerStateDelegate {
-    nonisolated func playerStateDidChange(_ playerState: SPTAppRemotePlayerState) {
-        Task { @MainActor in
-            // Update playback state
-            let newState: MusicPlaybackState = playerState.isPaused ? .paused : .playing
-            playbackStateSubject.send(newState)
-
-            // Update now playing
-            let track = MusicTrack(
-                id: playerState.track.uri,
-                title: playerState.track.name,
-                artist: playerState.track.artist.name,
-                album: playerState.track.album.name,
-                duration: TimeInterval(playerState.track.duration) / 1000,
-                artworkURL: nil,
-                artworkData: nil
-            )
-            nowPlayingSubject.send(track)
-
-            logger.debug("Spotify state: \(String(describing: newState)), track: \(track.title)")
-        }
-    }
-}
-
-// MARK: - Spotify Types (Placeholder)
-
-// These would come from the Spotify SDK
-// Defined here as placeholders for compilation
-
-protocol SpotifyAppRemoteDelegate: AnyObject {
-    func appRemoteDidEstablishConnection(_ appRemote: SpotifyAppRemote)
-    func appRemote(_ appRemote: SpotifyAppRemote, didFailConnectionAttemptWithError error: Error?)
-    func appRemote(_ appRemote: SpotifyAppRemote, didDisconnectWithError error: Error?)
-}
-
-protocol SPTAppRemotePlayerStateDelegate: AnyObject {
-    func playerStateDidChange(_ playerState: SPTAppRemotePlayerState)
-}
-
-struct SpotifyConfiguration {
-    let clientID: String
-    let redirectURI: URL
-}
-
-class SpotifyAppRemote {
-    weak var delegate: SpotifyAppRemoteDelegate?
-    var playerAPI: SpotifyPlayerAPI?
-    var connectionParameters: SpotifyConnectionParameters
-
-    init(configuration: SpotifyConfiguration) {
-        self.connectionParameters = SpotifyConnectionParameters()
-    }
-
-    func connect() {}
-    func disconnect() {}
-}
-
-class SpotifyConnectionParameters {
-    var accessToken: String?
-}
-
-class SpotifyPlayerAPI {
-    weak var delegate: SPTAppRemotePlayerStateDelegate?
-
-    func subscribe(toPlayerState callback: @escaping (Any?, Error?) -> Void) {}
-    func resume(_ callback: @escaping (Any?, Error?) -> Void) {}
-    func pause(_ callback: @escaping (Any?, Error?) -> Void) {}
-    func skip(toNext callback: @escaping (Any?, Error?) -> Void) {}
-    func skip(toPrevious callback: @escaping (Any?, Error?) -> Void) {}
-}
-
-protocol SPTAppRemotePlayerState {
-    var isPaused: Bool { get }
-    var track: SPTAppRemoteTrack { get }
-}
-
-protocol SPTAppRemoteTrack {
-    var uri: String { get }
-    var name: String { get }
-    var duration: Int { get }
-    var artist: SPTAppRemoteArtist { get }
-    var album: SPTAppRemoteAlbum { get }
-}
-
-protocol SPTAppRemoteArtist {
-    var name: String { get }
-}
-
-protocol SPTAppRemoteAlbum {
-    var name: String { get }
-}
-
-// MARK: - Keychain Manager
-
-private enum KeychainManager {
-    static func save(key: String, value: String) {
-        let data = value.data(using: .utf8)!
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrAccount as String: key,
-            kSecValueData as String: data
-        ]
-
-        SecItemDelete(query as CFDictionary)
-        SecItemAdd(query as CFDictionary, nil)
-    }
-
-    static func load(key: String) -> String? {
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrAccount as String: key,
-            kSecReturnData as String: true
-        ]
-
-        var result: AnyObject?
-        SecItemCopyMatching(query as CFDictionary, &result)
-
-        guard let data = result as? Data else { return nil }
-        return String(data: data, encoding: .utf8)
-    }
-
-    static func delete(key: String) {
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrAccount as String: key
-        ]
-        SecItemDelete(query as CFDictionary)
+    // Legacy method for URL callback (not needed)
+    func handleAuthCallback(url: URL) {
+        logger.debug("Auth callback received but not needed")
     }
 }

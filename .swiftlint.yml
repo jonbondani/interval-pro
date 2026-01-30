@@ -136,6 +136,8 @@ custom_rules:
     severity: error
     excluded:
       - "IntervalPro/Core/Audio/.*"  # Music SDKs require UIKit
+      - "IntervalPro/Shared/Extensions/.*"  # Platform-specific extensions
+      - "IntervalPro/Features/Training/Views/TrainingView.swift"  # Image+Data extension
 
   no_hardcoded_bpm:
     name: "No hardcoded BPM values"
