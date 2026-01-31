@@ -17,13 +17,15 @@ final class TrainingViewModel: ObservableObject {
     @Published var totalElapsedTime: TimeInterval = 0
     @Published var phaseProgress: Double = 0
 
-    // MARK: - Published State - Heart Rate
+    // MARK: - Published State - Heart Rate & Data Source
     @Published var currentHeartRate: Int = 0
     @Published var zoneStatus: ZoneStatus = .inZone
     @Published var hrSource: DataSource = .healthKit
     @Published var timeInZone: TimeInterval = 0
+    @Published var isGarminConnected: Bool = false
 
     // MARK: - Published State - Metrics
+    @Published var currentCadence: Int = 0   // SPM - steps per minute (zone tracking)
     @Published var currentPace: Double = 0
     @Published var currentSpeed: Double = 0
     @Published var totalDistance: Double = 0
@@ -169,6 +171,18 @@ final class TrainingViewModel: ObservableObject {
 
         hrDataService.$timeInZone
             .assign(to: &$timeInZone)
+
+        hrDataService.$currentCadence
+            .assign(to: &$currentCadence)
+
+        // Track Garmin connection state
+        garminManager.connectionStatePublisher
+            .map { $0.isConnected }
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] connected in
+                self?.isGarminConnected = connected
+            }
+            .store(in: &cancellables)
 
         hrDataService.$currentPace
             .assign(to: &$currentPace)
@@ -317,15 +331,25 @@ final class TrainingViewModel: ObservableObject {
         intervalRecords = []
         totalDistance = 0
 
-        // Start HR monitoring - use simulation if no real source available
+        // Try to connect to Garmin if not connected
         if !garminManager.isConnected {
+            Log.training.info("Garmin not connected, attempting to scan...")
+            await garminManager.startScanning()
+
+            // Wait briefly for auto-connect to last device
+            try? await Task.sleep(for: .seconds(2))
+        }
+
+        // Start data monitoring
+        if garminManager.isConnected {
+            Log.training.info("Garmin connected - using real data")
+            try await hrDataService.start()
+        } else {
             // Enable simulation mode for testing without Garmin
             // Start with warmup zone if available, otherwise first work zone
             let initialZone = plan.warmupZone ?? plan.workZone
-            hrDataService.enableSimulation(targetHR: initialZone.targetBPM)
-            Log.training.info("No Garmin connected - using simulated HR data")
-        } else {
-            try await hrDataService.start()
+            hrDataService.enableSimulation(targetHR: initialZone.targetCadence)
+            Log.training.info("No Garmin connected - using simulated data (cadence target: \(initialZone.targetCadence) SPM)")
         }
 
         // Start zone tracking
@@ -688,10 +712,11 @@ final class TrainingViewModel: ObservableObject {
 extension TrainingViewModel {
     static func preview(
         phase: IntervalPhase = .work,
-        hr: Int = 168,
+        hr: Int = 145,          // Heart rate (FC)
+        cadence: Int = 170,     // Cadence (SPM)
         series: Int = 2,
         totalSeries: Int = 4,
-        pace: Double = 330,  // 5:30/km
+        pace: Double = 330,     // 5:30/km
         bestPace: Double = 320  // 5:20/km
     ) -> TrainingViewModel {
         let vm = TrainingViewModel(
@@ -703,6 +728,7 @@ extension TrainingViewModel {
 
         vm.currentPhase = phase
         vm.currentHeartRate = hr
+        vm.currentCadence = cadence
         vm.currentSeries = series
         vm.totalSeries = totalSeries
         vm.phaseRemainingTime = 90

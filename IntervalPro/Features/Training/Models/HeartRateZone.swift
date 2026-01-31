@@ -1,9 +1,13 @@
 import Foundation
 import SwiftUI
 
-/// Heart rate zone configuration
-/// Per CLAUDE.md: NEVER hardcode BPM values, always use this struct
+/// Cadence zone configuration (steps per minute / SPM)
+/// IMPORTANT: targetBPM = cadencia objetivo (pasos por minuto), NO frecuencia cardíaca
+/// La cadencia de carrera típica es 150-190 SPM
+/// Per CLAUDE.md: NEVER hardcode values, always use this struct
 struct HeartRateZone: Codable, Equatable, Hashable {
+    /// Target cadence in steps per minute (SPM)
+    /// Typical running cadence: 150-190 SPM
     let targetBPM: Int
     let toleranceBPM: Int
 
@@ -15,6 +19,11 @@ struct HeartRateZone: Codable, Equatable, Hashable {
         minBPM...maxBPM
     }
 
+    /// Alias for clarity - target cadence in SPM
+    var targetCadence: Int { targetBPM }
+    var minCadence: Int { minBPM }
+    var maxCadence: Int { maxBPM }
+
     // MARK: - Init
     init(targetBPM: Int, toleranceBPM: Int = 5) {
         self.targetBPM = targetBPM
@@ -22,40 +31,40 @@ struct HeartRateZone: Codable, Equatable, Hashable {
     }
 
     // MARK: - Zone Checking
-    /// Check if a heart rate value is within this zone
-    func contains(_ bpm: Int) -> Bool {
-        range.contains(bpm)
+    /// Check if a cadence value is within this zone
+    func contains(_ cadence: Int) -> Bool {
+        range.contains(cadence)
     }
 
-    /// Check if heart rate is below the zone
-    func isBelow(_ bpm: Int) -> Bool {
-        bpm < minBPM
+    /// Check if cadence is below the zone
+    func isBelow(_ cadence: Int) -> Bool {
+        cadence < minBPM
     }
 
-    /// Check if heart rate is above the zone
-    func isAbove(_ bpm: Int) -> Bool {
-        bpm > maxBPM
+    /// Check if cadence is above the zone
+    func isAbove(_ cadence: Int) -> Bool {
+        cadence > maxBPM
     }
 
     /// Get the deviation from target (positive = above, negative = below)
-    func deviation(from bpm: Int) -> Int {
-        bpm - targetBPM
+    func deviation(from cadence: Int) -> Int {
+        cadence - targetBPM
     }
 
-    /// Get the zone status for a given heart rate
-    func status(for bpm: Int) -> ZoneStatus {
-        if contains(bpm) {
+    /// Get the zone status for a given cadence
+    func status(for cadence: Int) -> ZoneStatus {
+        if contains(cadence) {
             return .inZone
-        } else if isBelow(bpm) {
-            return .belowZone(by: minBPM - bpm)
+        } else if isBelow(cadence) {
+            return .belowZone(by: minBPM - cadence)
         } else {
-            return .aboveZone(by: bpm - maxBPM)
+            return .aboveZone(by: cadence - maxBPM)
         }
     }
 }
 
 // MARK: - Zone Status
-enum ZoneStatus: Equatable {
+enum ZoneStatus: Equatable, CustomStringConvertible {
     case inZone
     case belowZone(by: Int)
     case aboveZone(by: Int)
@@ -63,6 +72,17 @@ enum ZoneStatus: Equatable {
     var isInZone: Bool {
         if case .inZone = self { return true }
         return false
+    }
+
+    var description: String {
+        switch self {
+        case .inZone:
+            return "inZone"
+        case .belowZone(let diff):
+            return "belowZone(\(diff))"
+        case .aboveZone(let diff):
+            return "aboveZone(\(diff))"
+        }
     }
 
     var color: Color {
@@ -90,11 +110,11 @@ enum ZoneStatus: Equatable {
     var instruction: String {
         switch self {
         case .inZone:
-            return "En zona"
+            return "Cadencia OK"
         case .belowZone(let diff):
-            return "Sube intensidad (+\(diff) bpm)"
+            return "Más rápido (+\(diff) spm)"
         case .aboveZone(let diff):
-            return "Baja intensidad (-\(diff) bpm)"
+            return "Más lento (-\(diff) spm)"
         }
     }
 }

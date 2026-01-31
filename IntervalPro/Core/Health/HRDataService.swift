@@ -1,22 +1,26 @@
 import Foundation
 import Combine
 
-/// Unified heart rate data service that merges Garmin and HealthKit streams
+/// Unified data service that merges Garmin and HealthKit streams
+/// Tracks: Heart Rate (FC), Cadence (SPM), Pace, Speed
+/// Zone tracking is based on CADENCE (not heart rate)
 /// Per CLAUDE.md: Prioritize Garmin when available, fallback to HealthKit
 @MainActor
 final class HRDataService: ObservableObject {
     // MARK: - Singleton
     static let shared = HRDataService()
 
-    // MARK: - Published State
+    // MARK: - Published State - Heart Rate (FC - just for display)
     @Published private(set) var currentHeartRate: Int = 0
     @Published private(set) var currentSource: DataSource = .healthKit
     @Published private(set) var isReceivingData: Bool = false
+
+    // MARK: - Published State - Running Metrics
     @Published private(set) var currentPace: Double = 0  // sec/km
     @Published private(set) var currentSpeed: Double = 0  // km/h
-    @Published private(set) var currentCadence: Int = 0
+    @Published private(set) var currentCadence: Int = 0   // steps per minute (SPM)
 
-    // MARK: - Zone Tracking
+    // MARK: - Zone Tracking (based on CADENCE, not heart rate)
     @Published private(set) var currentZoneStatus: ZoneStatus = .inZone
     @Published private(set) var timeInZone: TimeInterval = 0
 
@@ -98,7 +102,7 @@ final class HRDataService: ObservableObject {
         garminManager.cadencePublisher
             .receive(on: DispatchQueue.main)
             .sink { [weak self] cadence in
-                self?.currentCadence = cadence
+                self?.processCadence(cadence)
             }
             .store(in: &cancellables)
 
@@ -137,16 +141,14 @@ final class HRDataService: ObservableObject {
         // Apply smoothing
         let smoothedBPM = applySmoothing(bpm)
 
-        // Update state
+        // Update state - HR is just for display, NOT for zone tracking
         currentHeartRate = smoothedBPM
         currentSource = source
         isReceivingData = true
         lastHRTimestamp = Date()
 
-        // Update zone status if tracking
-        if let zone = targetZone {
-            currentZoneStatus = zone.status(for: smoothedBPM)
-        }
+        // NOTE: Zone tracking is based on CADENCE, not heart rate
+        // See processCadence() for zone status updates
 
         // Publish sample
         let sample = HRSample(
@@ -207,6 +209,25 @@ final class HRDataService: ObservableObject {
         }
     }
 
+    // MARK: - Cadence Processing (Zone Tracking)
+    /// Process cadence data from Garmin - THIS is what zone tracking uses
+    private func processCadence(_ cadence: Int) {
+        // Validate cadence range (typical running: 140-200 SPM)
+        guard cadence >= 100 && cadence <= 220 else {
+            Log.health.warning("Cadence outlier filtered: \(cadence)")
+            return
+        }
+
+        currentCadence = cadence
+
+        // Update zone status based on CADENCE (not heart rate)
+        if let zone = targetZone {
+            currentZoneStatus = zone.status(for: cadence)
+        }
+
+        Log.health.debug("Cadence: \(cadence) SPM, zone: \(self.currentZoneStatus)")
+    }
+
     // MARK: - Garmin Connection Handling
     private func handleGarminConnectionChange(_ state: GarminConnectionState) {
         switch state {
@@ -240,7 +261,7 @@ final class HRDataService: ObservableObject {
         }
     }
 
-    // MARK: - Zone Tracking
+    // MARK: - Zone Tracking (Cadence-based)
     func startZoneTracking(targetZone: HeartRateZone) {
         self.targetZone = targetZone
         timeInZone = 0
@@ -251,7 +272,7 @@ final class HRDataService: ObservableObject {
             }
         }
 
-        Log.health.info("Zone tracking started: target \(targetZone.targetBPM) BPM")
+        Log.health.info("Cadence zone tracking started: target \(targetZone.targetCadence) SPM")
     }
 
     func stopZoneTracking() {
@@ -310,45 +331,51 @@ final class HRDataService: ObservableObject {
 
     // MARK: - Simulation Mode
 
-    /// Enable simulation mode for testing without real HR devices
+    /// Enable simulation mode for testing without real devices
+    /// targetCadence = target cadence in SPM (steps per minute) for zone tracking
     func enableSimulation(targetHR: Int = 150) {
         isSimulationMode = true
-        simulatedTargetHR = targetHR
+        simulatedTargetHR = targetHR  // This is actually cadence target for zone tracking
         currentSource = .simulated
         isReceivingData = true
 
         simulationTask?.cancel()
         simulationTask = Task { @MainActor in
-            Log.health.info("HR Simulation started with target: \(targetHR) BPM")
+            Log.health.info("Simulation started - Cadence target: \(targetHR) SPM")
 
-            var currentSimulatedHR = 80  // Start from resting HR
+            var currentSimulatedCadence = 140  // Start from low cadence
+            var currentSimulatedHR = 100  // Start from moderate HR
 
             while !Task.isCancelled && isSimulationMode {
-                // Simulate gradual HR changes toward target with some variance
-                let diff = simulatedTargetHR - currentSimulatedHR
-                let change: Int
-                if abs(diff) > 10 {
-                    change = diff > 0 ? Int.random(in: 2...5) : Int.random(in: -5 ... -2)
+                // Simulate gradual CADENCE changes toward target with some variance
+                let cadenceDiff = simulatedTargetHR - currentSimulatedCadence
+                let cadenceChange: Int
+                if abs(cadenceDiff) > 10 {
+                    cadenceChange = cadenceDiff > 0 ? Int.random(in: 2...5) : Int.random(in: -5 ... -2)
                 } else {
-                    change = Int.random(in: -3...3)
+                    cadenceChange = Int.random(in: -3...3)
                 }
-                currentSimulatedHR = max(60, min(200, currentSimulatedHR + change))
+                currentSimulatedCadence = max(130, min(200, currentSimulatedCadence + cadenceChange))
 
-                // Process the simulated HR
-                processSimulatedHeartRate(currentSimulatedHR)
+                // Simulate HR separately (correlated with cadence somewhat)
+                let hrChange = Int.random(in: -2...3)
+                currentSimulatedHR = max(90, min(190, currentSimulatedHR + hrChange))
+
+                // Process the simulated data
+                processSimulatedData(cadence: currentSimulatedCadence, heartRate: currentSimulatedHR)
 
                 // Update every 1 second
                 try? await Task.sleep(for: .seconds(1))
             }
 
-            Log.health.info("HR Simulation stopped")
+            Log.health.info("Simulation stopped")
         }
     }
 
-    /// Update the target HR for simulation (e.g., when phase changes)
-    func updateSimulatedTarget(_ targetHR: Int) {
-        simulatedTargetHR = targetHR
-        Log.health.debug("Simulation target updated to: \(targetHR) BPM")
+    /// Update the target cadence for simulation (e.g., when phase changes)
+    func updateSimulatedTarget(_ targetCadence: Int) {
+        simulatedTargetHR = targetCadence
+        Log.health.debug("Simulation cadence target updated to: \(targetCadence) SPM")
     }
 
     /// Disable simulation mode
@@ -358,19 +385,23 @@ final class HRDataService: ObservableObject {
         simulationTask = nil
     }
 
-    private func processSimulatedHeartRate(_ bpm: Int) {
-        currentHeartRate = bpm
+    private func processSimulatedData(cadence: Int, heartRate: Int) {
+        // Update cadence - THIS affects zone tracking
+        currentCadence = cadence
+
+        // Update heart rate - just for display
+        currentHeartRate = heartRate
         isReceivingData = true
 
-        // Update zone status if tracking
+        // Update zone status based on CADENCE (not heart rate)
         if let zone = targetZone {
-            currentZoneStatus = zone.status(for: bpm)
+            currentZoneStatus = zone.status(for: cadence)
         }
 
-        // Publish sample
+        // Publish HR sample for recording
         let sample = HRSample(
             timestamp: Date(),
-            bpm: bpm,
+            bpm: heartRate,
             source: .simulated
         )
         heartRateSubject.send(sample)

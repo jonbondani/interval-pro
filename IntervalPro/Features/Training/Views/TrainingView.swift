@@ -37,7 +37,8 @@ struct TrainingView: View {
                     VStack(spacing: DesignTokens.Spacing.md) {
                         phaseIndicator
                         timerDisplay
-                        heartRateDisplay
+                        cadenceDisplay       // Cadence with zone tracking
+                        heartRateDisplay     // FC - just display
                         metricsRow
                         paceComparisonSection
                         seriesProgress
@@ -88,6 +89,19 @@ struct TrainingView: View {
                     .foregroundStyle(.primary)
             }
             .accessibleTapTarget()
+
+            Spacer()
+
+            // Data source indicator
+            HStack(spacing: 4) {
+                Circle()
+                    .fill(viewModel.isGarminConnected ? Color.green : Color.orange)
+                    .frame(width: 8, height: 8)
+
+                Text(viewModel.isGarminConnected ? "Garmin" : "Simulado")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
 
             Spacer()
 
@@ -244,27 +258,26 @@ struct TrainingView: View {
         }
     }
 
-    // MARK: - Heart Rate Display
-    private var heartRateDisplay: some View {
+    // MARK: - Cadence Display (Zone Tracking)
+    private var cadenceDisplay: some View {
         VStack(spacing: DesignTokens.Spacing.xxs) {
             HStack(alignment: .firstTextBaseline, spacing: DesignTokens.Spacing.xs) {
-                Image(systemName: "heart.fill")
+                Image(systemName: "figure.run")
                     .font(.title3)
-                    .foregroundStyle(.red)
-                    .symbolEffect(.pulse, options: .repeating, value: viewModel.currentHeartRate)
+                    .foregroundStyle(.blue)
 
-                Text("\(viewModel.currentHeartRate)")
+                Text("\(viewModel.currentCadence)")
                     .font(.system(size: 44, weight: .bold, design: .rounded))
                     .contentTransition(.numericText())
 
-                Text("BPM")
+                Text("SPM")
                     .font(.callout)
                     .foregroundStyle(.secondary)
             }
 
-            // Zone indicator - compact
-            HRZoneBar(
-                currentHR: viewModel.currentHeartRate,
+            // Zone indicator - cadence vs target
+            CadenceZoneBar(
+                currentCadence: viewModel.currentCadence,
                 targetZone: viewModel.targetZone,
                 status: viewModel.zoneStatus
             )
@@ -280,6 +293,34 @@ struct TrainingView: View {
         .padding(.horizontal, DesignTokens.Spacing.md)
         .background(Color(.secondarySystemBackground))
         .clipShape(RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.medium))
+    }
+
+    // MARK: - Heart Rate Display (FC - just for info)
+    private var heartRateDisplay: some View {
+        HStack(spacing: DesignTokens.Spacing.sm) {
+            Image(systemName: "heart.fill")
+                .font(.title3)
+                .foregroundStyle(.red)
+                .symbolEffect(.pulse, options: .repeating, value: viewModel.currentHeartRate)
+
+            Text("\(viewModel.currentHeartRate)")
+                .font(.system(size: 28, weight: .bold, design: .rounded))
+                .contentTransition(.numericText())
+
+            Text("lpm")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            Spacer()
+
+            Text("FC")
+                .font(.caption.weight(.medium))
+                .foregroundStyle(.secondary)
+        }
+        .padding(.vertical, DesignTokens.Spacing.xs)
+        .padding(.horizontal, DesignTokens.Spacing.md)
+        .background(Color(.secondarySystemBackground))
+        .clipShape(RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.small))
     }
 
     // MARK: - Metrics Row
@@ -408,9 +449,9 @@ struct TrainingView: View {
                 Text("Serie \(viewModel.currentSeries)/\(viewModel.totalSeries) · Bloque \(viewModel.currentBlock)/\(viewModel.totalBlocks)")
                     .font(.headline)
 
-                // Show target BPM for current block
+                // Show target cadence for current block
                 if let zone = viewModel.targetZone {
-                    Text("Objetivo: \(zone.targetBPM) BPM")
+                    Text("Cadencia: \(zone.targetCadence) SPM")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
@@ -503,10 +544,10 @@ struct TrainingView: View {
     }
 }
 
-// MARK: - HR Zone Bar
-struct HRZoneBar: View {
-    let currentHR: Int
-    let targetZone: HeartRateZone?
+// MARK: - Cadence Zone Bar
+struct CadenceZoneBar: View {
+    let currentCadence: Int
+    let targetZone: HeartRateZone?  // Actually cadence zone
     let status: ZoneStatus
 
     var body: some View {
@@ -518,8 +559,8 @@ struct HRZoneBar: View {
 
                 // Zone indicators
                 if let zone = targetZone {
-                    let minPos = hrPosition(zone.minBPM, in: geo.size.width)
-                    let maxPos = hrPosition(zone.maxBPM, in: geo.size.width)
+                    let minPos = cadencePosition(zone.minCadence, in: geo.size.width)
+                    let maxPos = cadencePosition(zone.maxCadence, in: geo.size.width)
 
                     // Target zone highlight
                     RoundedRectangle(cornerRadius: 6)
@@ -527,24 +568,24 @@ struct HRZoneBar: View {
                         .frame(width: maxPos - minPos)
                         .offset(x: minPos)
 
-                    // Current HR indicator
-                    let hrPos = hrPosition(currentHR, in: geo.size.width)
+                    // Current cadence indicator
+                    let cadencePos = cadencePosition(currentCadence, in: geo.size.width)
                     Circle()
                         .fill(status.color)
                         .frame(width: 12, height: 12)
-                        .offset(x: hrPos - 6)
-                        .animation(.spring(response: 0.3), value: currentHR)
+                        .offset(x: cadencePos - 6)
+                        .animation(.spring(response: 0.3), value: currentCadence)
                 }
             }
         }
         .frame(height: 16)
     }
 
-    private func hrPosition(_ hr: Int, in width: CGFloat) -> CGFloat {
-        // Map HR range 100-200 to width
-        let minHR: CGFloat = 100
-        let maxHR: CGFloat = 200
-        let normalized = (CGFloat(hr) - minHR) / (maxHR - minHR)
+    private func cadencePosition(_ cadence: Int, in width: CGFloat) -> CGFloat {
+        // Map cadence range 130-200 SPM to width
+        let minCadence: CGFloat = 130
+        let maxCadence: CGFloat = 200
+        let normalized = (CGFloat(cadence) - minCadence) / (maxCadence - minCadence)
         return max(0, min(width, normalized * width))
     }
 }
@@ -583,7 +624,8 @@ struct MetricCard: View {
         plan: .intermediate,
         viewModel: TrainingViewModel.preview(
             phase: .work,
-            hr: 168,
+            hr: 155,        // FC
+            cadence: 172,   // SPM - en zona
             pace: 310,      // 5:10/km - faster than record
             bestPace: 330   // 5:30/km
         )
@@ -595,7 +637,8 @@ struct MetricCard: View {
         plan: .intermediate,
         viewModel: TrainingViewModel.preview(
             phase: .work,
-            hr: 168,
+            hr: 165,
+            cadence: 168,
             pace: 360,      // 6:00/km - slower than record
             bestPace: 330   // 5:30/km
         )
@@ -606,7 +649,7 @@ struct MetricCard: View {
 #Preview("Rest Phase") {
     TrainingView(
         plan: .intermediate,
-        viewModel: TrainingViewModel.preview(phase: .rest, hr: 145)
+        viewModel: TrainingViewModel.preview(phase: .rest, hr: 130, cadence: 148)
     )
     .preferredColorScheme(.dark)
 }
@@ -614,7 +657,7 @@ struct MetricCard: View {
 #Preview("Idle") {
     TrainingView(
         plan: .intermediate,
-        viewModel: TrainingViewModel.preview(phase: .idle, hr: 0)
+        viewModel: TrainingViewModel.preview(phase: .idle, hr: 0, cadence: 0)
     )
 }
 
