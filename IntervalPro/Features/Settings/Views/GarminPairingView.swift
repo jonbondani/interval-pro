@@ -61,11 +61,21 @@ struct GarminPairingView: View {
     // MARK: - Disconnected Content
     private var disconnectedContent: some View {
         VStack(spacing: DesignTokens.Spacing.lg) {
-            Text("Conecta tu Garmin Fenix para obtener datos de frecuencia cardíaca en tiempo real durante tus entrenamientos.")
+            Text("Conecta tu Garmin para obtener datos de frecuencia cardíaca y cadencia en tiempo real.")
                 .font(.body)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, DesignTokens.Spacing.lg)
+
+            // Quick tip
+            HStack(spacing: DesignTokens.Spacing.sm) {
+                Image(systemName: "lightbulb.fill")
+                    .foregroundStyle(.yellow)
+                Text("Activa 'Transmitir FC' en tu reloj antes de buscar")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.horizontal)
 
             Button {
                 Task {
@@ -100,11 +110,7 @@ struct GarminPairingView: View {
                 .foregroundStyle(.secondary)
 
             if viewModel.discoveredDevices.isEmpty {
-                Text("Asegúrate de que tu Garmin esté encendido y cerca.")
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal)
+                hrBroadcastInstructions
             } else {
                 deviceList
             }
@@ -113,6 +119,45 @@ struct GarminPairingView: View {
                 viewModel.stopScanning()
             }
             .foregroundStyle(.red)
+        }
+    }
+
+    // MARK: - HR Broadcast Instructions
+    private var hrBroadcastInstructions: some View {
+        VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
+            Text("Para conectar tu Garmin:")
+                .font(.headline)
+
+            VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
+                instructionRow(number: 1, text: "En tu reloj Garmin, ve a Configuración")
+                instructionRow(number: 2, text: "Selecciona Sensores y Accesorios")
+                instructionRow(number: 3, text: "Activa 'Transmitir FC' (Broadcast Heart Rate)")
+                instructionRow(number: 4, text: "Mantén el reloj cerca del iPhone")
+            }
+
+            Text("Nota: En Fenix, mantén pulsado el botón UP y busca 'Transmitir FC'")
+                .font(.caption)
+                .foregroundStyle(.orange)
+                .padding(.top, DesignTokens.Spacing.xs)
+        }
+        .padding()
+        .background(Color(.tertiarySystemBackground))
+        .clipShape(RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.medium))
+        .padding(.horizontal)
+    }
+
+    private func instructionRow(number: Int, text: String) -> some View {
+        HStack(alignment: .top, spacing: DesignTokens.Spacing.sm) {
+            Text("\(number)")
+                .font(.caption.bold())
+                .foregroundStyle(.white)
+                .frame(width: 20, height: 20)
+                .background(Color.blue)
+                .clipShape(Circle())
+
+            Text(text)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
         }
     }
 

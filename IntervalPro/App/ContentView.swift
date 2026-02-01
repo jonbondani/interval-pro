@@ -264,18 +264,93 @@ struct ProgressDashboardView: View {
 }
 
 struct ProfileView: View {
+    @EnvironmentObject private var appState: AppState
+    @State private var showGarminPairing = false
+    @StateObject private var garminManager = GarminManager.shared
+
     var body: some View {
         NavigationStack {
-            Text("Perfil")
-                .navigationTitle("Perfil")
+            List {
+                // Connection Status Section
+                Section("Estado de Conexión") {
+                    // Garmin status
+                    Button {
+                        showGarminPairing = true
+                    } label: {
+                        HStack {
+                            Image(systemName: "applewatch.radiowaves.left.and.right")
+                                .foregroundStyle(garminManager.isConnected ? .green : .orange)
+
+                            VStack(alignment: .leading) {
+                                Text("Garmin")
+                                    .foregroundStyle(.primary)
+                                Text(garminManager.connectionState.displayText)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+
+                            Spacer()
+
+                            Image(systemName: "chevron.right")
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+
+                // Info Section
+                Section("Información") {
+                    HStack {
+                        Image(systemName: "info.circle")
+                            .foregroundStyle(.blue)
+                        Text("Los entrenamientos se guardan localmente en la app")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                // Debug Section
+                Section("Debug") {
+                    Button("Reiniciar Onboarding") {
+                        appState.resetOnboarding()
+                    }
+                    .foregroundStyle(.red)
+                }
+            }
+            .navigationTitle("Perfil")
+            .sheet(isPresented: $showGarminPairing) {
+                GarminPairingView()
+            }
         }
     }
 }
 
 struct OnboardingView: View {
     @EnvironmentObject private var appState: AppState
+    @State private var currentStep: OnboardingStep = .welcome
+    @State private var showGarminPairing = false
+
+    enum OnboardingStep {
+        case welcome
+        case garmin  // HealthKit removed - requires paid dev account
+    }
 
     var body: some View {
+        VStack(spacing: 32) {
+            switch currentStep {
+            case .welcome:
+                welcomeContent
+
+            case .garmin:
+                garminSetupContent
+            }
+        }
+        .sheet(isPresented: $showGarminPairing) {
+            GarminPairingView()
+        }
+    }
+
+    // MARK: - Welcome Content
+    private var welcomeContent: some View {
         VStack(spacing: 32) {
             Spacer()
 
@@ -286,7 +361,7 @@ struct OnboardingView: View {
             Text("Bienvenido a IntervalPro")
                 .font(.title.bold())
 
-            Text("Entrena por intervalos con precisión basada en tu frecuencia cardíaca")
+            Text("Entrena por intervalos con precisión basada en tu cadencia y frecuencia cardíaca")
                 .font(.body)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
@@ -295,7 +370,7 @@ struct OnboardingView: View {
             Spacer()
 
             Button {
-                appState.completeOnboarding()
+                currentStep = .garmin
             } label: {
                 Text("Comenzar")
                     .font(.headline)
@@ -307,6 +382,78 @@ struct OnboardingView: View {
             }
             .padding(.horizontal, 24)
             .padding(.bottom, 48)
+        }
+    }
+
+    // MARK: - Garmin Setup Content
+    private var garminSetupContent: some View {
+        VStack(spacing: 32) {
+            Spacer()
+
+            ZStack {
+                Circle()
+                    .fill(Color.blue.opacity(0.1))
+                    .frame(width: 120, height: 120)
+
+                Image(systemName: "applewatch.radiowaves.left.and.right")
+                    .font(.system(size: 50))
+                    .foregroundStyle(.blue)
+            }
+
+            Text("Conecta tu Garmin")
+                .font(.title.bold())
+
+            Text("Conecta tu reloj Garmin para obtener datos de cadencia y frecuencia cardíaca en tiempo real.")
+                .font(.body)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 32)
+
+            // Instructions
+            VStack(alignment: .leading, spacing: 12) {
+                instructionRow(icon: "1.circle.fill", text: "Activa 'Transmitir FC' en tu Garmin")
+                instructionRow(icon: "2.circle.fill", text: "Mantén el reloj cerca del iPhone")
+                instructionRow(icon: "3.circle.fill", text: "Pulsa 'Conectar Garmin' abajo")
+            }
+            .padding()
+            .background(Color(.tertiarySystemBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .padding(.horizontal, 24)
+
+            Spacer()
+
+            VStack(spacing: 12) {
+                Button {
+                    showGarminPairing = true
+                } label: {
+                    Label("Conectar Garmin", systemImage: "applewatch")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(.blue)
+                        .foregroundStyle(.white)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+
+                Button {
+                    appState.completeOnboarding()
+                } label: {
+                    Text("Continuar sin Garmin")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .padding(.horizontal, 24)
+            .padding(.bottom, 48)
+        }
+    }
+
+    private func instructionRow(icon: String, text: String) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .foregroundStyle(.blue)
+            Text(text)
+                .font(.subheadline)
         }
     }
 }

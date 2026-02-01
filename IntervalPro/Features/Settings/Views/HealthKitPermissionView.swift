@@ -72,10 +72,9 @@ struct HealthKitPermissionView: View {
                 Button {
                     Task {
                         await viewModel.requestPermission()
-                        if viewModel.isAuthorized {
-                            onComplete()
-                            dismiss()
-                        }
+                        // Continue regardless of result - HealthKit is optional
+                        // Garmin is the primary data source
+                        onComplete()
                     }
                 } label: {
                     if viewModel.isLoading {
@@ -93,13 +92,12 @@ struct HealthKitPermissionView: View {
                 .clipShape(RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.medium))
                 .disabled(viewModel.isLoading)
 
-                if !viewModel.isAuthorized {
-                    Button("Ahora no") {
-                        dismiss()
-                    }
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                Button("Saltar este paso") {
+                    // HealthKit is optional - Garmin is primary
+                    onComplete()
                 }
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
             }
             .padding(.horizontal, DesignTokens.Spacing.lg)
             .padding(.bottom, DesignTokens.Spacing.xl)

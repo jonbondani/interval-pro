@@ -89,13 +89,18 @@ final class GarminManager: NSObject, ObservableObject, GarminManaging {
     // MARK: - Init
     private override init() {
         super.init()
-        centralManager = CBCentralManager(delegate: nil, queue: nil)
+
+        // Initialize CBCentralManager with options to show Bluetooth permission dialog
+        let options: [String: Any] = [
+            CBCentralManagerOptionShowPowerAlertKey: true
+        ]
+        centralManager = CBCentralManager(delegate: nil, queue: nil, options: options)
         centralManager.delegate = self
 
         // Load last connected device
         lastConnectedDeviceId = UserDefaults.standard.string(forKey: Keys.lastDeviceId)
 
-        Log.bluetooth.debug("GarminManager initialized")
+        Log.bluetooth.info("GarminManager initialized - waiting for Bluetooth state")
     }
 
     // MARK: - Scanning
@@ -109,12 +114,39 @@ final class GarminManager: NSObject, ObservableObject, GarminManaging {
         discoveredDevices = []
         updateConnectionState(.scanning)
 
+        // First, try to retrieve already-connected peripherals with HR service
+        // This is important when Garmin is paired via iOS Bluetooth Settings
+        let connectedPeripherals = centralManager.retrieveConnectedPeripherals(
+            withServices: [ServiceUUID.heartRate, ServiceUUID.runningSpeedCadence]
+        )
+
+        for peripheral in connectedPeripherals {
+            let name = peripheral.name ?? "Unknown"
+            Log.bluetooth.info("Found connected peripheral: '\(name)'")
+
+            let device = DiscoveredDevice(
+                id: peripheral.identifier.uuidString,
+                name: name,
+                rssi: -50  // Assume good signal for connected devices
+            )
+            discoveredDevices.append(device)
+
+            // Auto-connect to first found connected peripheral
+            Log.bluetooth.info("Auto-connecting to paired device: \(name)")
+            updateConnectionState(.connecting)
+            centralManager.connect(peripheral, options: nil)
+            return
+        }
+
+        // If no connected peripherals, scan for new ones
+        // Note: Some Garmin watches only advertise HR service during an activity
+        // So we scan for both HR service specifically AND all devices (nil)
         centralManager.scanForPeripherals(
-            withServices: [ServiceUUID.heartRate],
+            withServices: nil,  // Scan all devices, filter by name after
             options: [CBCentralManagerScanOptionAllowDuplicatesKey: false]
         )
 
-        Log.bluetooth.info("Started scanning for Garmin devices")
+        Log.bluetooth.info("Started scanning for BLE devices (no connected peripherals found)")
 
         // Set scan timeout
         scanTimeout?.cancel()
@@ -317,32 +349,37 @@ final class GarminManager: NSObject, ObservableObject, GarminManaging {
 extension GarminManager: CBCentralManagerDelegate {
     nonisolated func centralManagerDidUpdateState(_ central: CBCentralManager) {
         Task { @MainActor in
+            Log.bluetooth.info("Bluetooth state changed: \(central.state.rawValue)")
+
             switch central.state {
             case .poweredOn:
-                Log.bluetooth.info("Bluetooth powered on")
+                Log.bluetooth.info("Bluetooth powered on - ready to scan")
                 // Auto-reconnect to last device if available
                 if let lastId = lastConnectedDeviceId,
                    let uuid = UUID(uuidString: lastId),
                    let peripheral = central.retrievePeripherals(withIdentifiers: [uuid]).first {
+                    Log.bluetooth.info("Found last connected device, attempting reconnect: \(peripheral.name ?? "Unknown")")
                     updateConnectionState(.connecting)
                     central.connect(peripheral, options: nil)
+                } else {
+                    Log.bluetooth.debug("No previous device to reconnect")
                 }
             case .poweredOff:
-                Log.bluetooth.warning("Bluetooth powered off")
+                Log.bluetooth.warning("Bluetooth powered off - enable in Settings")
                 cleanup()
                 updateConnectionState(.failed(.bluetoothOff))
             case .unauthorized:
-                Log.bluetooth.error("Bluetooth unauthorized")
+                Log.bluetooth.error("Bluetooth unauthorized - check app permissions in Settings > Privacy > Bluetooth")
                 updateConnectionState(.failed(.bluetoothUnauthorized))
             case .unsupported:
-                Log.bluetooth.error("Bluetooth unsupported")
+                Log.bluetooth.error("Bluetooth unsupported on this device")
                 updateConnectionState(.failed(.bluetoothOff))
             case .resetting:
-                Log.bluetooth.warning("Bluetooth resetting")
+                Log.bluetooth.warning("Bluetooth resetting...")
             case .unknown:
-                Log.bluetooth.debug("Bluetooth state unknown")
+                Log.bluetooth.debug("Bluetooth state unknown - waiting...")
             @unknown default:
-                break
+                Log.bluetooth.debug("Bluetooth unknown state: \(central.state.rawValue)")
             }
         }
     }
@@ -355,11 +392,29 @@ extension GarminManager: CBCentralManagerDelegate {
     ) {
         Task { @MainActor in
             let name = peripheral.name ?? advertisementData[CBAdvertisementDataLocalNameKey] as? String ?? "Unknown"
+            let nameLower = name.lowercased()
 
-            // Filter for Garmin devices
-            guard name.lowercased().contains("garmin") ||
-                  name.lowercased().contains("fenix") ||
-                  name.lowercased().contains("forerunner") else {
+            // Check if this looks like a Garmin/fitness device
+            let isLikelyGarmin = nameLower.contains("garmin") ||
+                                 nameLower.contains("fenix") ||
+                                 nameLower.contains("forerunner") ||
+                                 nameLower.contains("vivoactive") ||
+                                 nameLower.contains("venu") ||
+                                 nameLower.contains("instinct") ||
+                                 nameLower.contains("enduro") ||
+                                 nameLower.contains("hrm") ||  // HR monitor strap
+                                 nameLower.contains("heart")
+
+            // Log all discovered devices for debugging
+            Log.bluetooth.debug("BLE discovered: '\(name)' (RSSI: \(RSSI), likelyGarmin: \(isLikelyGarmin))")
+
+            // Accept Garmin devices regardless of signal, others need good signal
+            guard isLikelyGarmin || RSSI.intValue > -75 else {
+                return
+            }
+
+            // Skip completely unnamed devices
+            guard name != "Unknown" || isLikelyGarmin else {
                 return
             }
 
@@ -371,7 +426,15 @@ extension GarminManager: CBCentralManagerDelegate {
 
             if !discoveredDevices.contains(where: { $0.id == device.id }) {
                 discoveredDevices.append(device)
-                Log.bluetooth.debug("Discovered: \(name) (RSSI: \(RSSI))")
+                Log.bluetooth.info("Added device: \(name) (ID: \(peripheral.identifier.uuidString))")
+
+                // Auto-connect to first Garmin device found
+                if isLikelyGarmin && connectedPeripheral == nil {
+                    Log.bluetooth.info("Auto-connecting to Garmin device: \(name)")
+                    stopScanning()
+                    updateConnectionState(.connecting)
+                    central.connect(peripheral, options: nil)
+                }
             }
         }
     }
