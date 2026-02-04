@@ -356,6 +356,14 @@ final class MetronomeEngine: NSObject, ObservableObject, AudioEngineProtocol {
         await announce(status.instruction)
     }
 
+    func announceCoachingInstruction(_ instruction: CoachingInstruction) async {
+        await announce(instruction.voiceMessage)
+    }
+
+    func stopVoice() {
+        speechSynthesizer?.stopSpeaking(at: .immediate)
+    }
+
     private var currentLanguage: String {
         // Use device language, defaulting to Spanish
         let preferred = Locale.preferredLanguages.first ?? "es-ES"

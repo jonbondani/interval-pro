@@ -31,6 +31,10 @@ final class TrainingViewModel: ObservableObject {
     @Published var totalDistance: Double = 0
     @Published var avgHeartRate: Int = 0
 
+    // MARK: - Published State - Coaching (via CoachingService)
+    @Published var coachingStatus: CoachingStatus?
+    @Published var lastCoachingInstruction: CoachingInstruction = .maintainPace
+
     // MARK: - Published State - Best Session Comparison
     @Published var bestSession: TrainingSession?
     @Published var deltaVsBest: TimeInterval = 0
@@ -59,6 +63,7 @@ final class TrainingViewModel: ObservableObject {
     private let healthKitManager: HealthKitManaging
     private let sessionRepository: SessionRepositoryProtocol
     private let musicController: UnifiedMusicController
+    private let coachingService: CoachingService
 
     // MARK: - Session Tracking
     private var currentSession: TrainingSession?
@@ -137,9 +142,9 @@ final class TrainingViewModel: ObservableObject {
         garminManager: GarminManaging? = nil,
         healthKitManager: HealthKitManaging? = nil,
         sessionRepository: SessionRepositoryProtocol? = nil,
-        musicController: UnifiedMusicController? = nil
+        musicController: UnifiedMusicController? = nil,
+        coachingService: CoachingService? = nil
     ) {
-        // Asignamos los valores aquí dentro (MainActor), donde es seguro instanciarlos
         self.intervalTimer = intervalTimer ?? IntervalTimer()
         self.hrDataService = hrDataService ?? HRDataService.shared
         self.audioEngine = audioEngine ?? MetronomeEngine.shared
@@ -147,124 +152,107 @@ final class TrainingViewModel: ObservableObject {
         self.healthKitManager = healthKitManager ?? HealthKitManager.shared
         self.sessionRepository = sessionRepository ?? SessionRepository()
         self.musicController = musicController ?? UnifiedMusicController.shared
+        self.coachingService = coachingService ?? CoachingService.shared
 
-        // El resto de tu código de inicialización se queda igual:
+        // Configure coaching service with audio dependencies
+        self.coachingService.configure(
+            audioEngine: self.audioEngine,
+            musicController: self.musicController
+        )
+
         self.setupBindings()
         self.setupTimerCallbacks()
     }
 
     // MARK: - Setup
     private func setupBindings() {
-        // HR Data bindings
+        setupHRBindings()
+        setupCoachingBindings()
+        setupTimerBindings()
+        setupMusicBindings()
+    }
+
+    private func setupHRBindings() {
         hrDataService.$currentHeartRate
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] hr in
-                self?.handleHeartRateUpdate(hr)
-            }
+            .sink { [weak self] hr in self?.handleHeartRateUpdate(hr) }
             .store(in: &cancellables)
 
-        hrDataService.$currentZoneStatus
-            .assign(to: &$zoneStatus)
+        hrDataService.$currentZoneStatus.assign(to: &$zoneStatus)
+        hrDataService.$currentSource.assign(to: &$hrSource)
+        hrDataService.$timeInZone.assign(to: &$timeInZone)
+        hrDataService.$currentCadence.assign(to: &$currentCadence)
+        hrDataService.$currentPace.assign(to: &$currentPace)
+        hrDataService.$currentSpeed.assign(to: &$currentSpeed)
 
-        hrDataService.$currentSource
-            .assign(to: &$hrSource)
-
-        hrDataService.$timeInZone
-            .assign(to: &$timeInZone)
-
-        hrDataService.$currentCadence
-            .assign(to: &$currentCadence)
-
-        // Track Garmin connection state
         garminManager.connectionStatePublisher
             .map { $0.isConnected }
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] connected in
-                self?.isGarminConnected = connected
-            }
+            .sink { [weak self] connected in self?.isGarminConnected = connected }
             .store(in: &cancellables)
 
         hrDataService.$currentPace
-            .assign(to: &$currentPace)
+            .sink { [weak self] pace in self?.updatePaceComparison(currentPace: pace) }
+            .store(in: &cancellables)
+    }
 
-        hrDataService.$currentSpeed
-            .assign(to: &$currentSpeed)
+    private func setupCoachingBindings() {
+        Publishers.CombineLatest(hrDataService.$currentCadence, hrDataService.$currentPace)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] cadence, pace in
+                guard let self = self,
+                      self.timerState == .running,
+                      self.currentPhase == .work || self.currentPhase == .rest else { return }
+                self.coachingService.update(cadence: cadence, pace: pace)
+            }
+            .store(in: &cancellables)
 
-        // Timer state bindings
-        intervalTimer.$currentPhase
-            .assign(to: &$currentPhase)
+        coachingService.$currentStatus.assign(to: &$coachingStatus)
+        coachingService.$lastInstruction.assign(to: &$lastCoachingInstruction)
+    }
 
-        intervalTimer.$timerState
-            .assign(to: &$timerState)
+    private func setupTimerBindings() {
+        intervalTimer.$currentPhase.assign(to: &$currentPhase)
+        intervalTimer.$timerState.assign(to: &$timerState)
+        intervalTimer.$currentSeries.assign(to: &$currentSeries)
+        intervalTimer.$totalSeries.assign(to: &$totalSeries)
+        intervalTimer.$currentBlock.assign(to: &$currentBlock)
+        intervalTimer.$totalBlocks.assign(to: &$totalBlocks)
+        intervalTimer.$phaseRemainingTime.assign(to: &$phaseRemainingTime)
+        intervalTimer.$totalElapsedTime.assign(to: &$totalElapsedTime)
 
-        intervalTimer.$currentSeries
-            .assign(to: &$currentSeries)
-
-        intervalTimer.$totalSeries
-            .assign(to: &$totalSeries)
-
-        intervalTimer.$currentBlock
-            .assign(to: &$currentBlock)
-
-        intervalTimer.$totalBlocks
-            .assign(to: &$totalBlocks)
-
-        intervalTimer.$phaseRemainingTime
-            .assign(to: &$phaseRemainingTime)
-
-        intervalTimer.$totalElapsedTime
-            .assign(to: &$totalElapsedTime)
-
-        // Progress calculation
         intervalTimer.$phaseRemainingTime
             .combineLatest(intervalTimer.$currentPhase)
             .map { [weak self] remaining, phase -> Double in
                 guard let plan = self?.plan else { return 0 }
                 let duration: TimeInterval
                 switch phase {
-                case .warmup:
-                    duration = plan.warmupDuration ?? 0
-                case .work:
-                    duration = plan.workDuration
-                case .rest:
-                    duration = plan.restDuration
-                case .cooldown:
-                    duration = plan.cooldownDuration ?? 0
-                default:
-                    duration = 0
+                case .warmup: duration = plan.warmupDuration ?? 0
+                case .work: duration = plan.workDuration
+                case .rest: duration = plan.restDuration
+                case .cooldown: duration = plan.cooldownDuration ?? 0
+                default: duration = 0
                 }
                 guard duration > 0 else { return 0 }
                 return 1.0 - (remaining / duration)
             }
             .assign(to: &$phaseProgress)
+    }
 
-        // Music controller bindings
+    private func setupMusicBindings() {
         musicController.$playbackState
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] state in
-                self?.musicPlaybackState = state
-            }
+            .sink { [weak self] state in self?.musicPlaybackState = state }
             .store(in: &cancellables)
 
         musicController.$nowPlaying
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] track in
-                self?.nowPlayingTrack = track
-            }
+            .sink { [weak self] track in self?.nowPlayingTrack = track }
             .store(in: &cancellables)
 
         musicController.$isConnected
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] connected in
-                self?.isMusicConnected = connected
-            }
-            .store(in: &cancellables)
-
-        // Pace comparison with best session
-        hrDataService.$currentPace
-            .sink { [weak self] pace in
-                self?.updatePaceComparison(currentPace: pace)
-            }
+            .sink { [weak self] connected in self?.isMusicConnected = connected }
             .store(in: &cancellables)
     }
 
@@ -355,6 +343,12 @@ final class TrainingViewModel: ObservableObject {
         // Start zone tracking
         if let zone = targetZone {
             hrDataService.startZoneTracking(targetZone: zone)
+
+            // Configure coaching service
+            coachingService.setTargetZone(zone)
+            coachingService.setRecordPace(bestSession?.avgPace)
+            coachingService.isEnabled = isVoiceEnabled
+            coachingService.setWorkoutRunning(true)
         }
 
         // Start HealthKit workout (non-blocking - may fail on simulator)
@@ -411,8 +405,10 @@ final class TrainingViewModel: ObservableObject {
     func stopWorkout() async {
         intervalTimer.stop()
         audioEngine.stopMetronome()
+        audioEngine.stopVoice()  // Stop any ongoing voice announcements
         hrDataService.stop()
         hrDataService.disableSimulation()
+        coachingService.setWorkoutRunning(false)
 
         _ = try? await healthKitManager.endWorkout()
 
@@ -433,6 +429,7 @@ final class TrainingViewModel: ObservableObject {
         // Update zone tracking
         if let zone = targetZone {
             hrDataService.startZoneTracking(targetZone: zone)
+            coachingService.setTargetZone(zone)
 
             // Update simulation target if in simulation mode
             if hrDataService.isSimulationMode {
@@ -521,20 +518,8 @@ final class TrainingViewModel: ObservableObject {
         let sample = HRSample(bpm: hr, source: hrSource)
         hrSamples.append(sample)
 
-        // Voice alert if out of zone for too long
-        if case .belowZone(let diff) = zoneStatus, diff > 10 {
-            Task {
-                if isVoiceEnabled {
-                    await audioEngine.announceZoneStatus(zoneStatus)
-                }
-            }
-        } else if case .aboveZone(let diff) = zoneStatus, diff > 10 {
-            Task {
-                if isVoiceEnabled {
-                    await audioEngine.announceZoneStatus(zoneStatus)
-                }
-            }
-        }
+        // Note: Coaching announcements are now handled by updateCoachingStatus()
+        // which combines cadence AND pace, not just cadence
     }
 
     // MARK: - Interval Recording
@@ -656,6 +641,16 @@ final class TrainingViewModel: ObservableObject {
         }
     }
 
+    func toggleVoice() {
+        isVoiceEnabled.toggle()
+        coachingService.isEnabled = isVoiceEnabled
+        if !isVoiceEnabled {
+            audioEngine.stopVoice()
+        }
+        let status = isVoiceEnabled ? "ON" : "OFF"
+        Log.training.info("Voice announcements: \(status)")
+    }
+
     func setMetronomeBPM(_ bpm: Int) {
         metronomeBPM = bpm
         audioEngine.updateMetronomeBPM(bpm)
@@ -706,6 +701,7 @@ final class TrainingViewModel: ObservableObject {
             paceVsBest = 0
         }
     }
+
 }
 
 // MARK: - Preview Helpers

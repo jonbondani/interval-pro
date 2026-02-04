@@ -55,6 +55,8 @@
 	<string>IntervalPro guardará tus entrenamientos en la app Salud para que puedas ver tu historial completo de ejercicio.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>IntervalPro usa tu ubicación durante el entrenamiento para calcular distancia y ritmo cuando el GPS de Garmin no está disponible.</string>
+	<key>NSMotionUsageDescription</key>
+	<string>IntervalPro usa los sensores de movimiento del iPhone para detectar tu cadencia (pasos por minuto) durante el entrenamiento.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>audio</string>

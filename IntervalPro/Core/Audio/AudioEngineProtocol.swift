@@ -18,6 +18,8 @@ protocol AudioEngineProtocol: AnyObject {
     func announcePhaseChange(_ phase: IntervalPhase) async
     func announceTimeWarning(secondsRemaining: Int) async
     func announceZoneStatus(_ status: ZoneStatus) async
+    func announceCoachingInstruction(_ instruction: CoachingInstruction) async
+    func stopVoice()
 
     // MARK: - Audio Session
     func configureAudioSession() throws
@@ -148,6 +150,14 @@ final class MockAudioEngine: AudioEngineProtocol {
 
     func announceZoneStatus(_ status: ZoneStatus) async {
         await announce(status.instruction)
+    }
+
+    func announceCoachingInstruction(_ instruction: CoachingInstruction) async {
+        await announce(instruction.voiceMessage)
+    }
+
+    func stopVoice() {
+        Log.audio.debug("Mock: Voice stopped")
     }
 
     func configureAudioSession() throws {

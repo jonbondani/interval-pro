@@ -56,4 +56,5 @@ enum DataSource: String, Codable {
     case healthKit = "healthkit"
     case watch = "watch"
     case simulated = "simulated"
+    case pedometer = "pedometer"
 }

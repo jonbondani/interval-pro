@@ -162,85 +162,134 @@ struct TrainingPlan: Identifiable, Codable, Equatable {
 
 // MARK: - Default Templates
 extension TrainingPlan {
-    /// Rest zone used across all plans
-    private static let standardRestZone = HeartRateZone(targetBPM: 150, toleranceBPM: 10)
+    /// Rest zone used across all plans (trote suave ~7:00/km)
+    private static let standardRestZone = HeartRateZone(
+        targetBPM: 150,
+        toleranceBPM: 10,
+        targetPace: 420,      // 7:00/km
+        paceTolerance: 30
+    )
+
+    /// Warmup/cooldown zone (caminata rápida/trote muy suave ~8:00/km)
+    private static let warmupZone = HeartRateZone(
+        targetBPM: 140,
+        toleranceBPM: 10,
+        targetPace: 480,      // 8:00/km
+        paceTolerance: 60
+    )
 
     /// Recommended progressive pyramid workout
-    /// 5 min warmup @ 150 BPM
-    /// 2 series of: 3min@160 + rest, 3min@170 + rest, 3min@180 + rest
-    /// 5 min cooldown @ 150 BPM
+    /// Progresión: 6:00/km → 5:30/km → 5:00/km
     static let recommended = TrainingPlan(
         name: "Recomendado",
         workBlocks: [
             WorkBlock(
-                workZone: HeartRateZone(targetBPM: 160, toleranceBPM: 5),
-                workDuration: 180,  // 3 min
+                workZone: HeartRateZone(
+                    targetBPM: 160,
+                    toleranceBPM: 5,
+                    targetPace: 360,      // 6:00/km - ritmo cómodo
+                    paceTolerance: 15
+                ),
+                workDuration: 180,
                 restZone: standardRestZone,
-                restDuration: 180   // 3 min
+                restDuration: 180
             ),
             WorkBlock(
-                workZone: HeartRateZone(targetBPM: 170, toleranceBPM: 5),
-                workDuration: 180,  // 3 min
+                workZone: HeartRateZone(
+                    targetBPM: 170,
+                    toleranceBPM: 5,
+                    targetPace: 330,      // 5:30/km - ritmo medio
+                    paceTolerance: 15
+                ),
+                workDuration: 180,
                 restZone: standardRestZone,
-                restDuration: 180   // 3 min
+                restDuration: 180
             ),
             WorkBlock(
-                workZone: HeartRateZone(targetBPM: 180, toleranceBPM: 5),
-                workDuration: 180,  // 3 min
+                workZone: HeartRateZone(
+                    targetBPM: 180,
+                    toleranceBPM: 5,
+                    targetPace: 300,      // 5:00/km - ritmo rápido
+                    paceTolerance: 15
+                ),
+                workDuration: 180,
                 restZone: standardRestZone,
-                restDuration: 180   // 3 min
+                restDuration: 180
             )
         ],
         seriesCount: 2,
-        warmupDuration: 300,     // 5 min
-        warmupZone: standardRestZone,
-        cooldownDuration: 300,   // 5 min
-        cooldownZone: standardRestZone,
+        warmupDuration: 300,
+        warmupZone: warmupZone,
+        cooldownDuration: 300,
+        cooldownZone: warmupZone,
         isDefault: true
     )
 
     /// Beginner template: Lower intensity, longer rest
+    /// Ritmo objetivo: 6:30/km (suave)
     static let beginner = TrainingPlan(
         name: "Principiante",
-        workZone: HeartRateZone(targetBPM: 160, toleranceBPM: 8),
-        restZone: HeartRateZone(targetBPM: 140, toleranceBPM: 10),
-        workDuration: 120,  // 2 min
-        restDuration: 180,  // 3 min
+        workZone: HeartRateZone(
+            targetBPM: 160,
+            toleranceBPM: 8,
+            targetPace: 390,          // 6:30/km
+            paceTolerance: 30         // ±30 seg tolerancia amplia
+        ),
+        restZone: HeartRateZone(
+            targetBPM: 140,
+            toleranceBPM: 10,
+            targetPace: 480,          // 8:00/km (caminata/trote)
+            paceTolerance: 60
+        ),
+        workDuration: 120,
+        restDuration: 180,
         seriesCount: 3,
         warmupDuration: 300,
-        warmupZone: HeartRateZone(targetBPM: 140, toleranceBPM: 10),
+        warmupZone: warmupZone,
         cooldownDuration: 300,
-        cooldownZone: HeartRateZone(targetBPM: 140, toleranceBPM: 10),
+        cooldownZone: warmupZone,
         isDefault: true
     )
 
     /// Intermediate template: Standard intensity
+    /// Ritmo objetivo: 5:30/km
     static let intermediate = TrainingPlan(
         name: "Intermedio",
-        workZone: HeartRateZone(targetBPM: 170, toleranceBPM: 5),
-        restZone: HeartRateZone(targetBPM: 150, toleranceBPM: 8),
-        workDuration: 180,  // 3 min
-        restDuration: 180,  // 3 min
+        workZone: HeartRateZone(
+            targetBPM: 170,
+            toleranceBPM: 5,
+            targetPace: 330,          // 5:30/km
+            paceTolerance: 15
+        ),
+        restZone: standardRestZone,
+        workDuration: 180,
+        restDuration: 180,
         seriesCount: 4,
         warmupDuration: 300,
-        warmupZone: standardRestZone,
+        warmupZone: warmupZone,
         cooldownDuration: 300,
-        cooldownZone: standardRestZone,
+        cooldownZone: warmupZone,
         isDefault: true
     )
 
     /// Advanced template: High intensity, shorter rest
+    /// Ritmo objetivo: 4:45/km (competición)
     static let advanced = TrainingPlan(
         name: "Avanzado",
-        workZone: HeartRateZone(targetBPM: 180, toleranceBPM: 5),
-        restZone: HeartRateZone(targetBPM: 150, toleranceBPM: 8),
-        workDuration: 180,  // 3 min
-        restDuration: 120,  // 2 min
+        workZone: HeartRateZone(
+            targetBPM: 180,
+            toleranceBPM: 5,
+            targetPace: 285,          // 4:45/km
+            paceTolerance: 10         // Tolerancia estricta
+        ),
+        restZone: standardRestZone,
+        workDuration: 180,
+        restDuration: 120,
         seriesCount: 6,
         warmupDuration: 300,
-        warmupZone: standardRestZone,
+        warmupZone: warmupZone,
         cooldownDuration: 300,
-        cooldownZone: standardRestZone,
+        cooldownZone: warmupZone,
         isDefault: true
     )
 

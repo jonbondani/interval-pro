@@ -113,7 +113,18 @@ struct TrainingView: View {
             Spacer()
 
             // Audio controls
-            HStack(spacing: DesignTokens.Spacing.sm) {
+            HStack(spacing: DesignTokens.Spacing.md) {
+                // Voice toggle
+                Button {
+                    viewModel.toggleVoice()
+                } label: {
+                    Image(systemName: viewModel.isVoiceEnabled ? "speaker.wave.2.fill" : "speaker.slash.fill")
+                        .font(.title2)
+                        .foregroundStyle(viewModel.isVoiceEnabled ? .green : .secondary)
+                }
+                .accessibleTapTarget()
+
+                // Metronome toggle
                 Button {
                     viewModel.toggleMetronome()
                 } label: {

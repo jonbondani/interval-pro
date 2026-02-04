@@ -27,6 +27,7 @@ final class HRDataService: ObservableObject {
     // MARK: - Dependencies
     private let garminManager: GarminManaging
     private let healthKitManager: HealthKitManaging
+    private let pedometerService: PedometerService
 
     // MARK: - Private Properties
     private var cancellables = Set<AnyCancellable>()
@@ -54,13 +55,12 @@ final class HRDataService: ObservableObject {
     }
 
     // MARK: - Init
-    // Unificamos todo en un solo init
-    init(garminManager: GarminManaging? = nil, healthKitManager: HealthKitManaging? = nil) {
-        // Si no nos pasan nada (es nil), usamos los Singletons compartidos.
-        // Esto evita el warning de "Main Actor" en la declaración.
+    init(garminManager: GarminManaging? = nil, healthKitManager: HealthKitManaging? = nil,
+         pedometerService: PedometerService? = nil) {
         self.garminManager = garminManager ?? GarminManager.shared
         self.healthKitManager = healthKitManager ?? HealthKitManager.shared
-        
+        self.pedometerService = pedometerService ?? PedometerService.shared
+
         setupSubscriptions()
         setupFallbackNotification()
     }
@@ -102,7 +102,15 @@ final class HRDataService: ObservableObject {
         garminManager.cadencePublisher
             .receive(on: DispatchQueue.main)
             .sink { [weak self] cadence in
-                self?.processCadence(cadence)
+                self?.processCadence(cadence, source: .garmin)
+            }
+            .store(in: &cancellables)
+
+        // Subscribe to iPhone pedometer cadence (primary source for cadence)
+        pedometerService.cadencePublisher
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] cadence in
+                self?.processCadence(cadence, source: .pedometer)
             }
             .store(in: &cancellables)
 
@@ -210,11 +218,19 @@ final class HRDataService: ObservableObject {
     }
 
     // MARK: - Cadence Processing (Zone Tracking)
-    /// Process cadence data from Garmin - THIS is what zone tracking uses
-    private func processCadence(_ cadence: Int) {
+    /// Process cadence data - THIS is what zone tracking uses
+    /// Sources: Garmin (if available) or iPhone pedometer (primary)
+    private func processCadence(_ cadence: Int, source: DataSource) {
+        // Source prioritization: Garmin > Pedometer
+        // If Garmin is connected and providing cadence, ignore pedometer
+        if source == .pedometer && garminManager.isConnected && currentCadence > 0 {
+            // Only ignore if we've recently received Garmin cadence
+            return
+        }
+
         // Validate cadence range (typical running: 140-200 SPM)
         guard cadence >= 100 && cadence <= 220 else {
-            Log.health.warning("Cadence outlier filtered: \(cadence)")
+            Log.health.warning("Cadence outlier filtered: \(cadence) from \(source.rawValue)")
             return
         }
 
@@ -225,7 +241,7 @@ final class HRDataService: ObservableObject {
             currentZoneStatus = zone.status(for: cadence)
         }
 
-        Log.health.debug("Cadence: \(cadence) SPM, zone: \(self.currentZoneStatus)")
+        Log.health.debug("Cadence: \(cadence) SPM from \(source.rawValue), zone: \(self.currentZoneStatus)")
     }
 
     // MARK: - Garmin Connection Handling
@@ -303,6 +319,9 @@ final class HRDataService: ObservableObject {
             await garminManager.startScanning()
         }
 
+        // Start iPhone pedometer for cadence detection (primary cadence source)
+        pedometerService.start()
+
         // Also start HealthKit as backup (non-blocking - may fail without paid dev account)
         do {
             try await healthKitManager.startHeartRateMonitoring()
@@ -317,6 +336,7 @@ final class HRDataService: ObservableObject {
     func stop() {
         dataTimeoutTask?.cancel()
         stopZoneTracking()
+        pedometerService.stop()
         healthKitManager.stopHeartRateMonitoring()
         recentHRValues.removeAll()
 

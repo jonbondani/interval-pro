@@ -53,6 +53,8 @@
 		F68A72F53F210DAF29133593 /* HeartRateZoneTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF6368C74FCAADA72956830B /* HeartRateZoneTests.swift */; };
 		FA4A1E1E6117B79A5F47CEA7 /* IntervalPhase.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D339D1298DF192A08A3F335 /* IntervalPhase.swift */; };
 		FA5CEBAD52D5267BC2C406A6 /* SessionRepositoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34EBF75ECD44EB7FB28461A4 /* SessionRepositoryTests.swift */; };
+		PEDBUILD01A2B3C4D5E6F7G8 /* PedometerService.swift in Sources */ = {isa = PBXBuildFile; fileRef = PEDOMETER01A2B3C4D5E6F7G8 /* PedometerService.swift */; };
+		COACHBUILD01A2B3C4D5E6F7G /* CoachingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = COACHING01A2B3C4D5E6F7G8H /* CoachingService.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -116,6 +118,8 @@
 		F97A12E9CD1CA59B90C0A4B7 /* HealthKitManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitManagerTests.swift; sourceTree = "<group>"; };
 		F9CAE8774F13B487213EF209 /* IntervalProTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = IntervalProTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		FD6CD68DC235FFE45481FD83 /* IntervalPro.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = IntervalPro.entitlements; sourceTree = "<group>"; };
+		PEDOMETER01A2B3C4D5E6F7G8 /* PedometerService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PedometerService.swift; sourceTree = "<group>"; };
+		COACHING01A2B3C4D5E6F7G8H /* CoachingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoachingService.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -191,8 +195,10 @@
 				15D8F24B4B2745CA57B44541 /* Audio */,
 				E421A316EC0B5D3690495AFA /* Bluetooth */,
 				6467B44D82E927B6D623BFA4 /* Health */,
+				MOTION01A2B3C4D5E6F7G8H9 /* Motion */,
 				40D4E790BCD9CC7A8E8ECF13 /* Persistence */,
 				364625CF5FE1CCB0A455E294 /* Timer */,
+				TRAINING01A2B3C4D5E6F7G8H /* Training */,
 			);
 			path = Core;
 			sourceTree = "<group>";
@@ -282,6 +288,22 @@
 				7E544BA9CE546C0A5F81875F /* HRDataService.swift */,
 			);
 			path = Health;
+			sourceTree = "<group>";
+		};
+		MOTION01A2B3C4D5E6F7G8H9 /* Motion */ = {
+			isa = PBXGroup;
+			children = (
+				PEDOMETER01A2B3C4D5E6F7G8 /* PedometerService.swift */,
+			);
+			path = Motion;
+			sourceTree = "<group>";
+		};
+		TRAINING01A2B3C4D5E6F7G8H /* Training */ = {
+			isa = PBXGroup;
+			children = (
+				COACHING01A2B3C4D5E6F7G8H /* CoachingService.swift */,
+			);
+			path = Training;
 			sourceTree = "<group>";
 		};
 		72815156B95FCAA1A1EDFC98 /* Views */ = {
@@ -601,6 +623,7 @@
 				F67295C99ABDBF772E9D318E /* AppleMusicController.swift in Sources */,
 				DD4C17B12549EAE062A719BB /* AudioEngineProtocol.swift in Sources */,
 				22CF5C83010F0C878BB49C05 /* ContentView.swift in Sources */,
+				COACHBUILD01A2B3C4D5E6F7G /* CoachingService.swift in Sources */,
 				1D41CE93E0B59194D2838DDF /* CoreDataStack.swift in Sources */,
 				0BF1110370FE36A77DAEE978 /* DesignTokens.swift in Sources */,
 				9B53BE5EDADB7636BF263A0E /* GarminManager.swift in Sources */,
@@ -620,6 +643,7 @@
 				D9A96B10197DC014EB10776C /* MiniPlayerView.swift in Sources */,
 				E6D6E107CA9FA10B67EAC321 /* MusicControllerProtocol.swift in Sources */,
 				9E4F484D5220DEA610389DDB /* NavigationRouter.swift in Sources */,
+				PEDBUILD01A2B3C4D5E6F7G8 /* PedometerService.swift in Sources */,
 				35660C3256DC50D81AE8BBA5 /* PlanRepository.swift in Sources */,
 				13441EFF8E3F1E72887D4353 /* SessionRepository.swift in Sources */,
 				A2A31391CF6A80FDD8AF1BEA /* SpotifyController.swift in Sources */,
