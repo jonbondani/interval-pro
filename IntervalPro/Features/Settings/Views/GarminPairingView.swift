@@ -5,32 +5,57 @@ import Combine
 struct GarminPairingView: View {
     @StateObject private var viewModel = GarminPairingViewModel()
     @Environment(\.dismiss) private var dismiss
+    @State private var showDebugLog = false
+    @State private var hasShownConnectedMessage = false
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                connectionStatusHeader
+            ScrollView {
+                VStack(spacing: 0) {
+                    connectionStatusHeader
 
-                switch viewModel.connectionState {
-                case .disconnected, .failed:
-                    disconnectedContent
-                case .scanning:
-                    scanningContent
-                case .connecting:
-                    connectingContent
-                case .connected:
-                    connectedContent
-                case .reconnecting:
-                    reconnectingContent
+                    switch viewModel.connectionState {
+                    case .disconnected, .failed:
+                        disconnectedContent
+                    case .scanning:
+                        scanningContent
+                    case .connecting:
+                        connectingContent
+                    case .connected:
+                        connectedContent
+                    case .reconnecting:
+                        reconnectingContent
+                    }
+
+                    // Debug section
+                    debugSection
+                        .padding(.top, DesignTokens.Spacing.xl)
                 }
-
-                Spacer()
+                .padding(.bottom, DesignTokens.Spacing.xl)
             }
             .navigationTitle("Garmin")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Cerrar") {
+                        dismiss()
+                    }
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button {
+                        showDebugLog.toggle()
+                    } label: {
+                        Image(systemName: "ladybug")
+                            .foregroundStyle(showDebugLog ? .orange : .secondary)
+                    }
+                }
+            }
+            .onChange(of: viewModel.connectionState) { _, newState in
+                // Auto-dismiss after 2 seconds when connected
+                if case .connected = newState, !hasShownConnectedMessage {
+                    hasShownConnectedMessage = true
+                    Task {
+                        try? await Task.sleep(for: .seconds(2))
                         dismiss()
                     }
                 }
@@ -92,6 +117,36 @@ struct GarminPairingView: View {
             }
             .padding(.horizontal, DesignTokens.Spacing.lg)
 
+            Button {
+                Task {
+                    await viewModel.findPairedGarmin()
+                }
+            } label: {
+                Label("Usar Garmin ya enlazado", systemImage: "link.circle.fill")
+                    .font(.headline)
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color.green.opacity(0.2))
+                    .foregroundStyle(.green)
+                    .clipShape(RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.medium))
+            }
+            .padding(.horizontal, DesignTokens.Spacing.lg)
+
+            Button {
+                Task {
+                    await viewModel.startDeepScan()
+                }
+            } label: {
+                Label("Búsqueda profunda (90s)", systemImage: "waveform.badge.magnifyingglass")
+                    .font(.subheadline)
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color.orange.opacity(0.2))
+                    .foregroundStyle(.orange)
+                    .clipShape(RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.medium))
+            }
+            .padding(.horizontal, DesignTokens.Spacing.lg)
+
             if case .failed(let error) = viewModel.connectionState {
                 ErrorBanner(message: error.localizedDescription)
             }
@@ -105,8 +160,12 @@ struct GarminPairingView: View {
                 .scaleEffect(1.5)
                 .padding()
 
-            Text("Buscando dispositivos Garmin...")
+            Text("Buscando dispositivos BLE...")
                 .font(.body)
+                .foregroundStyle(.secondary)
+
+            Text("Dispositivos encontrados: \(viewModel.discoveredDevices.count)")
+                .font(.caption)
                 .foregroundStyle(.secondary)
 
             if viewModel.discoveredDevices.isEmpty {
@@ -115,7 +174,7 @@ struct GarminPairingView: View {
                 deviceList
             }
 
-            Button("Cancelar") {
+            Button("Detener búsqueda") {
                 viewModel.stopScanning()
             }
             .foregroundStyle(.red)
@@ -125,20 +184,29 @@ struct GarminPairingView: View {
     // MARK: - HR Broadcast Instructions
     private var hrBroadcastInstructions: some View {
         VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
-            Text("Para conectar tu Garmin:")
+            Text("Para conectar tu Garmin Fenix 3HR:")
                 .font(.headline)
 
             VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
-                instructionRow(number: 1, text: "En tu reloj Garmin, ve a Configuración")
-                instructionRow(number: 2, text: "Selecciona Sensores y Accesorios")
-                instructionRow(number: 3, text: "Activa 'Transmitir FC' (Broadcast Heart Rate)")
-                instructionRow(number: 4, text: "Mantén el reloj cerca del iPhone")
+                instructionRow(number: 1, text: "Mantén pulsado UP en el reloj")
+                instructionRow(number: 2, text: "Ve a Configuración > Sensores")
+                instructionRow(number: 3, text: "Selecciona 'Transmitir FC'")
+                instructionRow(number: 4, text: "Elige 'Transmitir durante actividad' o 'Transmitir'")
             }
 
-            Text("Nota: En Fenix, mantén pulsado el botón UP y busca 'Transmitir FC'")
-                .font(.caption)
-                .foregroundStyle(.orange)
-                .padding(.top, DesignTokens.Spacing.xs)
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Importante:")
+                    .font(.caption.bold())
+                    .foregroundStyle(.orange)
+                Text("• El icono ❤️ con ondas debe aparecer en el reloj")
+                    .font(.caption)
+                Text("• Algunos modelos solo transmiten DURANTE una actividad")
+                    .font(.caption)
+                Text("• Inicia una actividad de carrera en el reloj si no aparece")
+                    .font(.caption)
+            }
+            .foregroundStyle(.secondary)
+            .padding(.top, DesignTokens.Spacing.xs)
         }
         .padding()
         .background(Color(.tertiarySystemBackground))
@@ -172,7 +240,7 @@ struct GarminPairingView: View {
             ForEach(viewModel.discoveredDevices) { device in
                 DeviceRow(device: device) {
                     Task {
-                        try await viewModel.connect(to: device.id)
+                        try? await viewModel.connect(to: device.id)
                     }
                 }
             }
@@ -190,7 +258,7 @@ struct GarminPairingView: View {
             Text("Conectando...")
                 .font(.headline)
 
-            Text("Estableciendo conexión con tu dispositivo Garmin.")
+            Text("Estableciendo conexión con tu dispositivo.")
                 .font(.body)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
@@ -210,25 +278,39 @@ struct GarminPairingView: View {
                     .font(.title2.bold())
             }
 
-            Text("Tu dispositivo está conectado y listo para transmitir datos.")
+            Text("Dispositivo conectado y listo.")
                 .font(.body)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal)
 
-            // Live HR display
-            if viewModel.currentHeartRate > 0 {
-                HStack(spacing: DesignTokens.Spacing.sm) {
-                    Image(systemName: "heart.fill")
-                        .foregroundStyle(.red)
-                    Text("\(viewModel.currentHeartRate)")
-                        .font(DesignTokens.Typography.hrDisplay)
-                    Text("BPM")
-                        .font(.title3)
-                        .foregroundStyle(.secondary)
+            // Live data display
+            VStack(spacing: DesignTokens.Spacing.md) {
+                if viewModel.currentHeartRate > 0 {
+                    HStack(spacing: DesignTokens.Spacing.sm) {
+                        Image(systemName: "heart.fill")
+                            .foregroundStyle(.red)
+                        Text("\(viewModel.currentHeartRate)")
+                            .font(.system(size: 48, weight: .bold, design: .rounded))
+                        Text("lpm")
+                            .font(.title3)
+                            .foregroundStyle(.secondary)
+                    }
                 }
-                .padding()
+
+                if viewModel.currentCadence > 0 {
+                    HStack(spacing: DesignTokens.Spacing.sm) {
+                        Image(systemName: "figure.run")
+                            .foregroundStyle(.blue)
+                        Text("\(viewModel.currentCadence)")
+                            .font(.system(size: 36, weight: .bold, design: .rounded))
+                        Text("spm")
+                            .font(.title3)
+                            .foregroundStyle(.secondary)
+                    }
+                }
             }
+            .padding()
 
             Button(role: .destructive) {
                 viewModel.disconnect()
@@ -265,6 +347,57 @@ struct GarminPairingView: View {
             .foregroundStyle(.red)
         }
     }
+
+    // MARK: - Debug Section
+    private var debugSection: some View {
+        VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
+            Button {
+                showDebugLog.toggle()
+            } label: {
+                HStack {
+                    Image(systemName: "ladybug")
+                    Text("Debug Log")
+                        .font(.headline)
+                    Spacer()
+                    Image(systemName: showDebugLog ? "chevron.up" : "chevron.down")
+                }
+                .foregroundStyle(.primary)
+                .padding()
+                .background(Color(.tertiarySystemBackground))
+                .clipShape(RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.small))
+            }
+            .padding(.horizontal)
+
+            if showDebugLog {
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack {
+                        Text("Log de Bluetooth")
+                            .font(.caption.bold())
+                        Spacer()
+                        Button("Limpiar") {
+                            viewModel.clearDebugLog()
+                        }
+                        .font(.caption)
+                    }
+
+                    ScrollView {
+                        LazyVStack(alignment: .leading, spacing: 2) {
+                            ForEach(Array(viewModel.debugLog.enumerated()), id: \.offset) { _, log in
+                                Text(log)
+                                    .font(.system(size: 10, design: .monospaced))
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                    .frame(maxHeight: 300)
+                }
+                .padding()
+                .background(Color(.secondarySystemBackground))
+                .clipShape(RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.small))
+                .padding(.horizontal)
+            }
+        }
+    }
 }
 
 // MARK: - Device Row
@@ -272,26 +405,55 @@ struct DeviceRow: View {
     let device: DiscoveredDevice
     let onTap: () -> Void
 
+    private var iconColor: Color {
+        if device.isGarmin { return .orange }
+        if device.hasHRService { return .red }
+        if device.hasRSCService { return .green }
+        return .blue
+    }
+
     var body: some View {
         Button(action: onTap) {
             HStack {
-                Image(systemName: "applewatch")
-                    .font(.title2)
-                    .foregroundStyle(.blue)
-                    .frame(width: 44)
+                ZStack {
+                    Circle()
+                        .fill(iconColor.opacity(0.2))
+                        .frame(width: 44, height: 44)
+
+                    Image(systemName: device.statusIcon)
+                        .font(.title2)
+                        .foregroundStyle(iconColor)
+                }
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(device.name)
                         .font(.headline)
                         .foregroundStyle(.primary)
 
+                    HStack(spacing: 8) {
+                        // Service badges
+                        if device.isGarmin {
+                            Badge(text: "GARMIN", color: .orange)
+                        }
+                        if device.hasHRService {
+                            Badge(text: "HR", color: .red)
+                        }
+                        if device.hasRSCService {
+                            Badge(text: "RSC", color: .green)
+                        }
+                    }
+
                     HStack(spacing: 4) {
                         Image(systemName: device.signalStrength.icon)
                             .font(.caption)
-                        Text("Señal: \(signalText)")
+                        Text("RSSI: \(device.rssi) dBm")
                             .font(.caption)
                     }
                     .foregroundStyle(.secondary)
+
+                    Text(device.id.prefix(12) + "...")
+                        .font(.system(size: 9, design: .monospaced))
+                        .foregroundStyle(.tertiary)
                 }
 
                 Spacer()
@@ -300,20 +462,32 @@ struct DeviceRow: View {
                     .foregroundStyle(.secondary)
             }
             .padding()
-            .background(Color(.secondarySystemBackground))
+            .background(device.isGarmin || device.hasHRService ?
+                        Color.green.opacity(0.05) : Color(.secondarySystemBackground))
+            .overlay(
+                RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.medium)
+                    .stroke(device.isGarmin || device.hasHRService ? Color.green.opacity(0.3) : Color.clear, lineWidth: 1)
+            )
             .clipShape(RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.medium))
         }
         .buttonStyle(.plain)
         .padding(.horizontal)
     }
+}
 
-    private var signalText: String {
-        switch device.signalStrength {
-        case .excellent: return "Excelente"
-        case .good: return "Buena"
-        case .fair: return "Regular"
-        case .weak: return "Débil"
-        }
+// MARK: - Badge
+struct Badge: View {
+    let text: String
+    let color: Color
+
+    var body: some View {
+        Text(text)
+            .font(.system(size: 9, weight: .bold))
+            .foregroundStyle(color)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(color.opacity(0.2))
+            .clipShape(Capsule())
     }
 }
 
@@ -342,38 +516,53 @@ final class GarminPairingViewModel: ObservableObject {
     @Published var connectionState: GarminConnectionState = .disconnected
     @Published var discoveredDevices: [DiscoveredDevice] = []
     @Published var currentHeartRate: Int = 0
+    @Published var currentCadence: Int = 0
+    @Published var debugLog: [String] = []
 
-    private let garminManager: GarminManaging
+    private let garminManager: GarminManager
     private var cancellables = Set<AnyCancellable>()
 
     var connectedDeviceName: String? {
         garminManager.connectedDeviceName
     }
 
-    init(garminManager: GarminManaging = GarminManager.shared) {
+    init(garminManager: GarminManager = GarminManager.shared) {
         self.garminManager = garminManager
         setupSubscriptions()
     }
 
     private func setupSubscriptions() {
-        garminManager.connectionStatePublisher
+        garminManager.$connectionState
             .receive(on: DispatchQueue.main)
             .assign(to: &$connectionState)
+
+        garminManager.$discoveredDevices
+            .receive(on: DispatchQueue.main)
+            .assign(to: &$discoveredDevices)
+
+        garminManager.$debugLog
+            .receive(on: DispatchQueue.main)
+            .assign(to: &$debugLog)
 
         garminManager.heartRatePublisher
             .receive(on: DispatchQueue.main)
             .assign(to: &$currentHeartRate)
 
-        // For discovered devices, we need to observe GarminManager directly
-        if let manager = garminManager as? GarminManager {
-            manager.$discoveredDevices
-                .receive(on: DispatchQueue.main)
-                .assign(to: &$discoveredDevices)
-        }
+        garminManager.cadencePublisher
+            .receive(on: DispatchQueue.main)
+            .assign(to: &$currentCadence)
     }
 
     func startScanning() async {
         await garminManager.startScanning()
+    }
+
+    func startDeepScan() async {
+        await garminManager.startDeepScan()
+    }
+
+    func findPairedGarmin() async {
+        await garminManager.findPairedGarmin()
     }
 
     func stopScanning() {
@@ -384,17 +573,20 @@ final class GarminPairingViewModel: ObservableObject {
         try await garminManager.connect(to: deviceId)
     }
 
+    func inspectDevice(_ deviceId: String) async {
+        await garminManager.inspectDevice(deviceId)
+    }
+
     func disconnect() {
         garminManager.disconnect()
+    }
+
+    func clearDebugLog() {
+        garminManager.clearDebugLog()
     }
 }
 
 // MARK: - Previews
 #Preview("Disconnected") {
     GarminPairingView()
-}
-
-#Preview("Scanning with devices") {
-    let view = GarminPairingView()
-    return view
 }

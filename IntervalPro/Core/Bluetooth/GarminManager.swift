@@ -3,15 +3,20 @@ import CoreBluetooth
 import Combine
 
 /// Garmin device manager using CoreBluetooth
-/// Per CLAUDE.md: Handles disconnection with exponential backoff and HealthKit fallback
+/// Supports standard BLE Heart Rate (0x180D) and Running Speed & Cadence (0x1814)
+///
+/// IMPORTANT: Garmin Fenix 3HR requirements:
+/// 1. Enable "Broadcast Heart Rate" on the watch: Settings > Sensors > Broadcast HR
+/// 2. The watch will then advertise as a BLE HR sensor
+/// 3. Device name may vary - could be "Fenix 3 HR", "GARMIN", or custom name
 @MainActor
 final class GarminManager: NSObject, ObservableObject, GarminManaging {
     // MARK: - Singleton
     static let shared = GarminManager()
 
-    // MARK: - BLE Service UUIDs
+    // MARK: - BLE Service UUIDs (Standard Bluetooth SIG)
     private enum ServiceUUID {
-        /// Standard Heart Rate Service
+        /// Heart Rate Service (standard BLE)
         static let heartRate = CBUUID(string: "180D")
         /// Heart Rate Measurement Characteristic
         static let heartRateMeasurement = CBUUID(string: "2A37")
@@ -19,27 +24,43 @@ final class GarminManager: NSObject, ObservableObject, GarminManaging {
         static let runningSpeedCadence = CBUUID(string: "1814")
         /// RSC Measurement Characteristic
         static let rscMeasurement = CBUUID(string: "2A53")
+        /// Device Information Service
+        static let deviceInfo = CBUUID(string: "180A")
+        /// Battery Service
+        static let battery = CBUUID(string: "180F")
+
+        // Garmin proprietary services (used by Garmin Connect)
+        static let garminProprietary1 = CBUUID(string: "6A4E2800-667B-11E3-949A-0800200C9A66")
+        static let garminProprietary2 = CBUUID(string: "6A4E2801-667B-11E3-949A-0800200C9A66")
+        static let garminFenixService = CBUUID(string: "6A4ECADE-667B-11E3-949A-0800200C9A66")
+
+        // Additional HR sensor services (some devices use these)
+        static let customHR1 = CBUUID(string: "0000FEE0-0000-1000-8000-00805F9B34FB") // Mi Band style
+        static let customHR2 = CBUUID(string: "0000FEE1-0000-1000-8000-00805F9B34FB")
     }
 
     // MARK: - Published State
     @Published private(set) var connectionState: GarminConnectionState = .disconnected
     @Published private(set) var discoveredDevices: [DiscoveredDevice] = []
     @Published private(set) var lastConnectedDeviceId: String?
+    @Published private(set) var debugLog: [String] = []
 
     // MARK: - Private Properties
     private var centralManager: CBCentralManager!
     private var connectedPeripheral: CBPeripheral?
     private var heartRateCharacteristic: CBCharacteristic?
     private var rscCharacteristic: CBCharacteristic?
+    private var allDiscoveredPeripherals: [UUID: CBPeripheral] = [:]
 
     private var reconnectAttempt = 0
     private var reconnectTask: Task<Void, Never>?
     private var scanTimeout: Task<Void, Never>?
+    private var isDeepScanMode = false
 
     // MARK: - Constants
     private let maxReconnectAttempts = 3
     private let baseReconnectDelay: TimeInterval = 2.0
-    private let scanTimeoutSeconds: TimeInterval = 30.0
+    private let scanTimeoutSeconds: TimeInterval = 60.0  // Extended for debugging
 
     // MARK: - Subjects
     private let connectionStateSubject = CurrentValueSubject<GarminConnectionState, Never>(.disconnected)
@@ -90,69 +111,114 @@ final class GarminManager: NSObject, ObservableObject, GarminManaging {
     private override init() {
         super.init()
 
-        // Initialize CBCentralManager with options to show Bluetooth permission dialog
+        addDebugLog("🔧 GarminManager inicializando...")
+
         let options: [String: Any] = [
             CBCentralManagerOptionShowPowerAlertKey: true
         ]
         centralManager = CBCentralManager(delegate: nil, queue: nil, options: options)
         centralManager.delegate = self
 
-        // Load last connected device
         lastConnectedDeviceId = UserDefaults.standard.string(forKey: Keys.lastDeviceId)
+        if let lastId = lastConnectedDeviceId {
+            addDebugLog("📱 Último dispositivo guardado: \(lastId)")
+        }
 
-        Log.bluetooth.info("GarminManager initialized - waiting for Bluetooth state")
+        Log.bluetooth.info("GarminManager initialized")
+    }
+
+    // MARK: - Debug Logging
+    private func addDebugLog(_ message: String) {
+        let timestamp = DateFormatter.localizedString(from: Date(), dateStyle: .none, timeStyle: .medium)
+        let logEntry = "[\(timestamp)] \(message)"
+        debugLog.append(logEntry)
+        Log.bluetooth.info("\(message)")
+
+        // Keep only last 100 entries
+        if debugLog.count > 100 {
+            debugLog.removeFirst()
+        }
     }
 
     // MARK: - Scanning
     func startScanning() async {
+        addDebugLog("🔍 Iniciando búsqueda de dispositivos BLE...")
+
         guard centralManager.state == .poweredOn else {
-            Log.bluetooth.warning("Bluetooth not powered on, cannot scan")
+            addDebugLog("❌ Bluetooth no está encendido (estado: \(centralManager.state.rawValue))")
             updateConnectionState(.failed(.bluetoothOff))
             return
         }
 
         discoveredDevices = []
+        allDiscoveredPeripherals = [:]
         updateConnectionState(.scanning)
 
-        // First, try to retrieve already-connected peripherals with HR service
-        // This is important when Garmin is paired via iOS Bluetooth Settings
-        let connectedPeripherals = centralManager.retrieveConnectedPeripherals(
-            withServices: [ServiceUUID.heartRate, ServiceUUID.runningSpeedCadence]
-        )
+        // STEP 1: Check for already connected peripherals with HR service
+        addDebugLog("📡 Buscando periféricos ya conectados con servicio HR (0x180D)...")
+        let hrConnected = centralManager.retrieveConnectedPeripherals(withServices: [ServiceUUID.heartRate])
+        addDebugLog("   → Encontrados con HR: \(hrConnected.count)")
+        for p in hrConnected {
+            addDebugLog("   → HR: '\(p.name ?? "Sin nombre")' ID: \(p.identifier)")
+        }
 
-        for peripheral in connectedPeripherals {
-            let name = peripheral.name ?? "Unknown"
-            Log.bluetooth.info("Found connected peripheral: '\(name)'")
+        // STEP 2: Check for connected peripherals with RSC service
+        addDebugLog("📡 Buscando periféricos con servicio RSC (0x1814)...")
+        let rscConnected = centralManager.retrieveConnectedPeripherals(withServices: [ServiceUUID.runningSpeedCadence])
+        addDebugLog("   → Encontrados con RSC: \(rscConnected.count)")
+        for p in rscConnected {
+            addDebugLog("   → RSC: '\(p.name ?? "Sin nombre")' ID: \(p.identifier)")
+        }
 
+        // STEP 3: Try to retrieve last known device
+        if let lastId = lastConnectedDeviceId, let uuid = UUID(uuidString: lastId) {
+            addDebugLog("📡 Buscando último dispositivo conocido: \(lastId)")
+            let known = centralManager.retrievePeripherals(withIdentifiers: [uuid])
+            if let peripheral = known.first {
+                addDebugLog("   → ✅ Encontrado: '\(peripheral.name ?? "Sin nombre")'")
+                addDebugLog("   → Intentando conectar...")
+                updateConnectionState(.connecting)
+                centralManager.connect(peripheral, options: nil)
+                return
+            } else {
+                addDebugLog("   → ❌ No encontrado en memoria")
+            }
+        }
+
+        // STEP 4: Auto-connect if we found HR-capable peripherals
+        let allConnected = hrConnected + rscConnected
+        if let first = allConnected.first {
+            addDebugLog("🔗 Auto-conectando a: '\(first.name ?? "Sin nombre")'")
             let device = DiscoveredDevice(
-                id: peripheral.identifier.uuidString,
-                name: name,
-                rssi: -50  // Assume good signal for connected devices
+                id: first.identifier.uuidString,
+                name: first.name ?? "HR Device",
+                rssi: -50
             )
             discoveredDevices.append(device)
-
-            // Auto-connect to first found connected peripheral
-            Log.bluetooth.info("Auto-connecting to paired device: \(name)")
+            allDiscoveredPeripherals[first.identifier] = first
             updateConnectionState(.connecting)
-            centralManager.connect(peripheral, options: nil)
+            centralManager.connect(first, options: nil)
             return
         }
 
-        // If no connected peripherals, scan for new ones
-        // Note: Some Garmin watches only advertise HR service during an activity
-        // So we scan for both HR service specifically AND all devices (nil)
-        centralManager.scanForPeripherals(
-            withServices: nil,  // Scan all devices, filter by name after
-            options: [CBCentralManagerScanOptionAllowDuplicatesKey: false]
-        )
+        // STEP 5: Start scanning for ALL devices (no service filter)
+        addDebugLog("📡 Escaneando TODOS los dispositivos BLE...")
+        addDebugLog("   (El Fenix debe tener 'Transmitir FC' activado)")
 
-        Log.bluetooth.info("Started scanning for BLE devices (no connected peripherals found)")
+        centralManager.scanForPeripherals(
+            withServices: nil,  // Scan ALL devices
+            options: [
+                CBCentralManagerScanOptionAllowDuplicatesKey: false
+            ]
+        )
 
         // Set scan timeout
         scanTimeout?.cancel()
         scanTimeout = Task { @MainActor in
             try? await Task.sleep(for: .seconds(scanTimeoutSeconds))
             if case .scanning = self.connectionState {
+                self.addDebugLog("⏱️ Timeout de escaneo alcanzado")
+                self.addDebugLog("📊 Total dispositivos encontrados: \(self.discoveredDevices.count)")
                 self.stopScanning()
                 if self.discoveredDevices.isEmpty {
                     self.updateConnectionState(.failed(.deviceNotFound))
@@ -161,45 +227,246 @@ final class GarminManager: NSObject, ObservableObject, GarminManaging {
         }
     }
 
+    /// Scan specifically for HR service (more targeted)
+    func scanForHRDevices() async {
+        addDebugLog("🎯 Escaneando solo dispositivos con HR Service (0x180D)...")
+
+        guard centralManager.state == .poweredOn else {
+            addDebugLog("❌ Bluetooth no disponible")
+            return
+        }
+
+        centralManager.scanForPeripherals(
+            withServices: [ServiceUUID.heartRate],
+            options: [CBCentralManagerScanOptionAllowDuplicatesKey: false]
+        )
+    }
+
+    /// Deep scan - logs ALL devices including weak signals
+    func startDeepScan() async {
+        isDeepScanMode = true
+        addDebugLog("🔬 DEEP SCAN - Mostrando TODOS los dispositivos BLE...")
+        addDebugLog("═══════════════════════════════════════════════════")
+
+        guard centralManager.state == .poweredOn else {
+            addDebugLog("❌ Bluetooth no disponible")
+            return
+        }
+
+        discoveredDevices = []
+        allDiscoveredPeripherals = [:]
+        updateConnectionState(.scanning)
+
+        // FIRST: Try to find the already-paired Garmin
+        await findPairedGarmin()
+
+        // Check ALL known Garmin service UUIDs
+        let garminServices = [
+            ServiceUUID.heartRate,
+            ServiceUUID.runningSpeedCadence,
+            ServiceUUID.garminProprietary1,
+            ServiceUUID.garminProprietary2,
+            ServiceUUID.garminFenixService
+        ]
+
+        addDebugLog("📡 Buscando periféricos con servicios Garmin conocidos...")
+        for (index, service) in garminServices.enumerated() {
+            let connected = centralManager.retrieveConnectedPeripherals(withServices: [service])
+            if !connected.isEmpty {
+                addDebugLog("   [\(index)] Servicio \(service.uuidString): \(connected.count) encontrados")
+                for peripheral in connected {
+                    addDebugLog("      → '\(peripheral.name ?? "Sin nombre")' ID:\(peripheral.identifier)")
+                    allDiscoveredPeripherals[peripheral.identifier] = peripheral
+
+                    // Add to discovered list
+                    if !discoveredDevices.contains(where: { $0.id == peripheral.identifier.uuidString }) {
+                        let device = DiscoveredDevice(
+                            id: peripheral.identifier.uuidString,
+                            name: peripheral.name ?? "Connected Device",
+                            rssi: -50,
+                            hasHRService: service == ServiceUUID.heartRate,
+                            hasRSCService: service == ServiceUUID.runningSpeedCadence,
+                            isGarmin: true
+                        )
+                        discoveredDevices.append(device)
+                    }
+                }
+            }
+        }
+
+        // Now scan with duplicates to see all advertisements
+        addDebugLog("📡 Iniciando escaneo de TODOS los dispositivos BLE...")
+        addDebugLog("   (Esto incluye dispositivos con señal débil)")
+
+        centralManager.scanForPeripherals(
+            withServices: nil,
+            options: [
+                CBCentralManagerScanOptionAllowDuplicatesKey: true  // Allow duplicates to see all ads
+            ]
+        )
+
+        // Extended timeout for deep scan
+        scanTimeout?.cancel()
+        scanTimeout = Task { @MainActor in
+            try? await Task.sleep(for: .seconds(90))  // 90 seconds for deep scan
+            if case .scanning = self.connectionState {
+                self.addDebugLog("═══════════════════════════════════════════════════")
+                self.addDebugLog("⏱️ DEEP SCAN completado")
+                self.addDebugLog("📊 Total dispositivos: \(self.allDiscoveredPeripherals.count)")
+                self.addDebugLog("📊 Dispositivos en lista: \(self.discoveredDevices.count)")
+                self.stopScanning()
+            }
+        }
+    }
+
+    /// Try to find the Garmin that's already paired to iOS
+    func findPairedGarmin() async {
+        addDebugLog("═══════════════════════════════════════════════════")
+        addDebugLog("🔍 BUSCANDO GARMIN YA CONECTADO A iOS...")
+        addDebugLog("═══════════════════════════════════════════════════")
+
+        updateConnectionState(.scanning)
+
+        let allFoundPeripherals = searchAllKnownServices()
+
+        addDebugLog("📊 Total dispositivos conectados: \(allFoundPeripherals.count)")
+
+        if !allFoundPeripherals.isEmpty {
+            await connectToFoundPeripherals(allFoundPeripherals)
+        } else {
+            logNoDevicesFound()
+            updateConnectionState(.disconnected)
+        }
+
+        addDebugLog("═══════════════════════════════════════════════════")
+    }
+
+    private func searchAllKnownServices() -> [CBPeripheral] {
+        // All known BLE service UUIDs (standard + Garmin proprietary)
+        let serviceUUIDs: [String] = [
+            // Standard services
+            "180D", "1814", "180F", "180A", "1800", "1801", "1805", "1811", "1812", "1816", "1818",
+            // Garmin proprietary
+            "6A4E2800-667B-11E3-949A-0800200C9A66", "6A4E2801-667B-11E3-949A-0800200C9A66",
+            "6A4E3200-667B-11E3-949A-0800200C9A66", "6A4ECADE-667B-11E3-949A-0800200C9A66",
+            // Apple services (ANCS for notifications)
+            "7905F431-B5CE-4E99-A40F-4B1E122D00D0", "89D3502B-0F36-433A-8EF4-C502AD55F8DC"
+        ]
+
+        var found: [CBPeripheral] = []
+        addDebugLog("🔎 Probando \(serviceUUIDs.count) servicios...")
+
+        for uuidString in serviceUUIDs {
+            let uuid = CBUUID(string: uuidString)
+            let connected = centralManager.retrieveConnectedPeripherals(withServices: [uuid])
+
+            for peripheral in connected where !found.contains(where: { $0.identifier == peripheral.identifier }) {
+                found.append(peripheral)
+                addDebugLog("✅ '\(peripheral.name ?? "?")' via \(uuidString.prefix(8))")
+            }
+        }
+        return found
+    }
+
+    private func connectToFoundPeripherals(_ peripherals: [CBPeripheral]) async {
+        addDebugLog("🔗 Conectando para descubrir servicios...")
+
+        for peripheral in peripherals {
+            let name = peripheral.name ?? "Dispositivo"
+            allDiscoveredPeripherals[peripheral.identifier] = peripheral
+
+            if !discoveredDevices.contains(where: { $0.id == peripheral.identifier.uuidString }) {
+                let isGarmin = name.lowercased().contains("garmin") || name.lowercased().contains("fenix")
+                discoveredDevices.append(DiscoveredDevice(
+                    id: peripheral.identifier.uuidString, name: name, rssi: -40,
+                    hasHRService: false, hasRSCService: false, isGarmin: isGarmin
+                ))
+            }
+
+            addDebugLog("🔗 Conectando a '\(name)'...")
+            peripheral.delegate = self
+            centralManager.connect(peripheral, options: nil)
+            try? await Task.sleep(for: .seconds(2))
+        }
+    }
+
+    private func logNoDevicesFound() {
+        addDebugLog("")
+        addDebugLog("❌ NO SE ENCONTRÓ NINGÚN DISPOSITIVO BLE CONECTADO")
+        addDebugLog("")
+        addDebugLog("⚠️ El Garmin puede estar conectado via Bluetooth Classic")
+        addDebugLog("   (para notificaciones) pero NO expone servicios BLE.")
+        addDebugLog("")
+        addDebugLog("💡 SOLUCIÓN: El Fenix 3HR necesita 'Transmitir FC' activo")
+        addDebugLog("   y probablemente solo funciona durante una actividad.")
+        addDebugLog("   Usa 'Búsqueda profunda' con el reloj transmitiendo.")
+    }
+
+    /// Try to connect to any device by ID (for manual inspection)
+    func inspectDevice(_ deviceId: String) async {
+        addDebugLog("🔍 Inspeccionando dispositivo: \(deviceId.prefix(12))...")
+
+        guard let peripheral = allDiscoveredPeripherals.values.first(where: { $0.identifier.uuidString == deviceId }) else {
+            addDebugLog("❌ Dispositivo no encontrado en caché")
+
+            // Try to retrieve from system
+            if let uuid = UUID(uuidString: deviceId) {
+                let retrieved = centralManager.retrievePeripherals(withIdentifiers: [uuid])
+                if let p = retrieved.first {
+                    addDebugLog("   → Recuperado del sistema: '\(p.name ?? "Sin nombre")'")
+                    allDiscoveredPeripherals[p.identifier] = p
+                    centralManager.connect(p, options: nil)
+                    return
+                }
+            }
+            return
+        }
+
+        addDebugLog("   → Conectando para inspeccionar servicios...")
+        stopScanning()
+        updateConnectionState(.connecting)
+        centralManager.connect(peripheral, options: nil)
+    }
+
     func stopScanning() {
         scanTimeout?.cancel()
         scanTimeout = nil
+        isDeepScanMode = false
 
         guard centralManager.isScanning else { return }
 
         centralManager.stopScan()
+        addDebugLog("🛑 Escaneo detenido")
 
         if case .scanning = connectionState {
             updateConnectionState(.disconnected)
         }
-
-        Log.bluetooth.debug("Stopped scanning")
     }
 
     // MARK: - Connection
     func connect(to deviceId: String) async throws {
+        addDebugLog("🔗 Conectando a dispositivo: \(deviceId)")
         stopScanning()
         reconnectTask?.cancel()
 
-        guard let device = discoveredDevices.first(where: { $0.id == deviceId }) else {
-            // Try to retrieve known peripheral
-            if let uuid = UUID(uuidString: deviceId),
-               let peripheral = centralManager.retrievePeripherals(withIdentifiers: [uuid]).first {
-                updateConnectionState(.connecting)
-                centralManager.connect(peripheral, options: nil)
-                return
-            }
-            throw GarminError.deviceNotFound
+        // Try from discovered devices first
+        if let peripheral = allDiscoveredPeripherals.values.first(where: { $0.identifier.uuidString == deviceId }) {
+            updateConnectionState(.connecting)
+            centralManager.connect(peripheral, options: nil)
+            return
         }
 
-        guard let peripheral = getPeripheral(for: device) else {
-            throw GarminError.deviceNotFound
+        // Try to retrieve by UUID
+        if let uuid = UUID(uuidString: deviceId),
+           let peripheral = centralManager.retrievePeripherals(withIdentifiers: [uuid]).first {
+            addDebugLog("   → Recuperado de sistema: '\(peripheral.name ?? "Unknown")'")
+            updateConnectionState(.connecting)
+            centralManager.connect(peripheral, options: nil)
+            return
         }
 
-        updateConnectionState(.connecting)
-        centralManager.connect(peripheral, options: nil)
-
-        Log.bluetooth.info("Connecting to device: \(device.name)")
+        addDebugLog("❌ Dispositivo no encontrado: \(deviceId)")
+        throw GarminError.deviceNotFound
     }
 
     func disconnect() {
@@ -208,27 +475,17 @@ final class GarminManager: NSObject, ObservableObject, GarminManaging {
         reconnectAttempt = 0
 
         if let peripheral = connectedPeripheral {
+            addDebugLog("🔌 Desconectando de: '\(peripheral.name ?? "Unknown")'")
             centralManager.cancelPeripheralConnection(peripheral)
         }
 
         cleanup()
         updateConnectionState(.disconnected)
-
-        Log.bluetooth.info("Disconnected from device")
     }
 
     // MARK: - AutoLap
     func sendLapMarker() async {
-        // Note: Standard BLE HR service doesn't support lap markers
-        // This would require Garmin-specific Connect IQ integration
-        // For now, we log the intent and the lap is tracked locally
-
-        Log.bluetooth.debug("Lap marker requested (local tracking)")
-
-        // If we had Garmin Connect IQ SDK:
-        // try await garminConnectIQ.sendMessage(["type": "lap"])
-
-        // Post notification for local handling
+        addDebugLog("🏃 Lap marker (solo local)")
         NotificationCenter.default.post(
             name: .garminLapMarkerSent,
             object: nil,
@@ -237,15 +494,14 @@ final class GarminManager: NSObject, ObservableObject, GarminManaging {
     }
 
     // MARK: - Reconnection Logic
-    /// Per CLAUDE.md: Automatic reconnection with exponential backoff
     private func handleDisconnection(peripheral: CBPeripheral, error: Error?) {
-        Log.bluetooth.warning("Device disconnected: \(error?.localizedDescription ?? "unknown")")
+        addDebugLog("⚠️ Desconexión: \(error?.localizedDescription ?? "sin error")")
 
         guard reconnectAttempt < maxReconnectAttempts else {
-            Log.bluetooth.error("Max reconnection attempts reached")
+            addDebugLog("❌ Máximo de reconexiones alcanzado")
             cleanup()
             updateConnectionState(.failed(.maxReconnectAttemptsExceeded))
-            notifyFallbackToHealthKit()
+            notifyFallbackToSimulation()
             return
         }
 
@@ -254,7 +510,7 @@ final class GarminManager: NSObject, ObservableObject, GarminManaging {
 
         reconnectTask = Task { @MainActor in
             let delay = baseReconnectDelay * pow(2.0, Double(reconnectAttempt - 1))
-            Log.bluetooth.debug("Reconnection attempt \(self.reconnectAttempt) in \(delay)s")
+            addDebugLog("🔄 Reconexión \(self.reconnectAttempt)/\(self.maxReconnectAttempts) en \(delay)s")
 
             try? await Task.sleep(for: .seconds(delay))
 
@@ -264,13 +520,9 @@ final class GarminManager: NSObject, ObservableObject, GarminManaging {
         }
     }
 
-    private func notifyFallbackToHealthKit() {
-        NotificationCenter.default.post(
-            name: .garminFallbackActivated,
-            object: nil
-        )
-
-        Log.bluetooth.info("Fallback to HealthKit activated")
+    private func notifyFallbackToSimulation() {
+        NotificationCenter.default.post(name: .garminFallbackActivated, object: nil)
+        addDebugLog("📱 Activando modo simulación como fallback")
     }
 
     // MARK: - State Management
@@ -290,11 +542,7 @@ final class GarminManager: NSObject, ObservableObject, GarminManaging {
         defaults.set(peripheral.identifier.uuidString, forKey: Keys.lastDeviceId)
         defaults.set(peripheral.name, forKey: Keys.lastDeviceName)
         lastConnectedDeviceId = peripheral.identifier.uuidString
-    }
-
-    private func getPeripheral(for device: DiscoveredDevice) -> CBPeripheral? {
-        guard let uuid = UUID(uuidString: device.id) else { return nil }
-        return centralManager.retrievePeripherals(withIdentifiers: [uuid]).first
+        addDebugLog("💾 Guardado como último dispositivo")
     }
 
     // MARK: - Data Parsing
@@ -303,9 +551,6 @@ final class GarminManager: NSObject, ObservableObject, GarminManaging {
 
         let bytes = [UInt8](data)
         let flags = bytes[0]
-
-        // Bit 0 of flags indicates format:
-        // 0 = UINT8 (1 byte), 1 = UINT16 (2 bytes)
         let isUInt16 = (flags & 0x01) != 0
 
         if isUInt16 && data.count >= 3 {
@@ -320,28 +565,38 @@ final class GarminManager: NSObject, ObservableObject, GarminManaging {
 
         let bytes = [UInt8](data)
         let flags = bytes[0]
-
         var offset = 1
 
-        // Instantaneous Speed (mandatory) - uint16, 1/256 m/s
+        // Speed (uint16, 1/256 m/s)
         let speedRaw = UInt16(bytes[offset]) | (UInt16(bytes[offset + 1]) << 8)
         let speedMS = Double(speedRaw) / 256.0
         let speedKMH = speedMS * 3.6
         offset += 2
 
-        // Calculate pace (min/km)
         let paceSecPerKm = speedMS > 0 ? 1000.0 / speedMS : 0
         paceSubject.send(paceSecPerKm)
         speedSubject.send(speedKMH)
 
-        // Instantaneous Cadence (optional, bit 0 of flags)
+        // Cadence (optional)
         if (flags & 0x01) != 0 && data.count >= offset + 1 {
             let cadence = Int(bytes[offset])
             cadenceSubject.send(cadence)
-            offset += 1
+            addDebugLog("📊 RSC: \(cadence) spm, \(String(format: "%.1f", speedKMH)) km/h")
         }
+    }
 
-        Log.bluetooth.debug("RSC: speed=\(String(format: "%.1f", speedKMH))km/h, pace=\(String(format: "%.0f", paceSecPerKm))s/km")
+    // MARK: - Debug Helper
+    func clearDebugLog() {
+        debugLog.removeAll()
+    }
+
+    func getSystemBluetoothInfo() -> String {
+        var info = "=== Sistema Bluetooth ===\n"
+        info += "Estado: \(centralManager.state.rawValue)\n"
+        info += "Escaneando: \(centralManager.isScanning)\n"
+        info += "Dispositivos descubiertos: \(discoveredDevices.count)\n"
+        info += "Periférico conectado: \(connectedPeripheral?.name ?? "ninguno")\n"
+        return info
     }
 }
 
@@ -349,37 +604,38 @@ final class GarminManager: NSObject, ObservableObject, GarminManaging {
 extension GarminManager: CBCentralManagerDelegate {
     nonisolated func centralManagerDidUpdateState(_ central: CBCentralManager) {
         Task { @MainActor in
-            Log.bluetooth.info("Bluetooth state changed: \(central.state.rawValue)")
+            let stateNames = ["unknown", "resetting", "unsupported", "unauthorized", "poweredOff", "poweredOn"]
+            let stateName = central.state.rawValue < stateNames.count ? stateNames[Int(central.state.rawValue)] : "?"
+
+            addDebugLog("📶 Bluetooth estado: \(stateName) (\(central.state.rawValue))")
 
             switch central.state {
             case .poweredOn:
-                Log.bluetooth.info("Bluetooth powered on - ready to scan")
-                // Auto-reconnect to last device if available
+                addDebugLog("✅ Bluetooth listo")
+                // Auto-reconnect
                 if let lastId = lastConnectedDeviceId,
                    let uuid = UUID(uuidString: lastId),
                    let peripheral = central.retrievePeripherals(withIdentifiers: [uuid]).first {
-                    Log.bluetooth.info("Found last connected device, attempting reconnect: \(peripheral.name ?? "Unknown")")
+                    addDebugLog("🔄 Reconectando a último dispositivo...")
                     updateConnectionState(.connecting)
                     central.connect(peripheral, options: nil)
-                } else {
-                    Log.bluetooth.debug("No previous device to reconnect")
                 }
+
             case .poweredOff:
-                Log.bluetooth.warning("Bluetooth powered off - enable in Settings")
+                addDebugLog("❌ Bluetooth apagado")
                 cleanup()
                 updateConnectionState(.failed(.bluetoothOff))
+
             case .unauthorized:
-                Log.bluetooth.error("Bluetooth unauthorized - check app permissions in Settings > Privacy > Bluetooth")
+                addDebugLog("⛔ Bluetooth no autorizado - revisa Ajustes > Privacidad > Bluetooth")
                 updateConnectionState(.failed(.bluetoothUnauthorized))
+
             case .unsupported:
-                Log.bluetooth.error("Bluetooth unsupported on this device")
+                addDebugLog("❌ Bluetooth no soportado en este dispositivo")
                 updateConnectionState(.failed(.bluetoothOff))
-            case .resetting:
-                Log.bluetooth.warning("Bluetooth resetting...")
-            case .unknown:
-                Log.bluetooth.debug("Bluetooth state unknown - waiting...")
-            @unknown default:
-                Log.bluetooth.debug("Bluetooth unknown state: \(central.state.rawValue)")
+
+            default:
+                addDebugLog("⏳ Estado: \(stateName)")
             }
         }
     }
@@ -391,10 +647,42 @@ extension GarminManager: CBCentralManagerDelegate {
         rssi RSSI: NSNumber
     ) {
         Task { @MainActor in
-            let name = peripheral.name ?? advertisementData[CBAdvertisementDataLocalNameKey] as? String ?? "Unknown"
-            let nameLower = name.lowercased()
+            let name = peripheral.name
+                ?? advertisementData[CBAdvertisementDataLocalNameKey] as? String
+                ?? "Unknown"
 
-            // Check if this looks like a Garmin/fitness device
+            // Get advertised services
+            let serviceUUIDs = advertisementData[CBAdvertisementDataServiceUUIDsKey] as? [CBUUID] ?? []
+            let overflowServices = advertisementData[CBAdvertisementDataOverflowServiceUUIDsKey] as? [CBUUID] ?? []
+            let allServices = serviceUUIDs + overflowServices
+
+            // Check manufacturer data (Garmin uses this)
+            let manufacturerData = advertisementData[CBAdvertisementDataManufacturerDataKey] as? Data
+            var manufacturerInfo = ""
+            if let data = manufacturerData {
+                let bytes = [UInt8](data)
+                if bytes.count >= 2 {
+                    let companyId = UInt16(bytes[0]) | (UInt16(bytes[1]) << 8)
+                    manufacturerInfo = "Mfr:\(String(format: "0x%04X", companyId))"
+                    // Garmin company ID is 0x0087 (135)
+                    if companyId == 0x0087 {
+                        manufacturerInfo += " [GARMIN!]"
+                    }
+                }
+            }
+
+            // Check if has HR/RSC/Garmin services
+            let hasHRService = allServices.contains(ServiceUUID.heartRate)
+            let hasRSCService = allServices.contains(ServiceUUID.runningSpeedCadence)
+            let hasGarminService = allServices.contains(ServiceUUID.garminProprietary1) ||
+                                   allServices.contains(ServiceUUID.garminProprietary2) ||
+                                   allServices.contains(ServiceUUID.garminFenixService)
+
+            // Check TX Power (can help identify fitness devices)
+            let txPower = advertisementData[CBAdvertisementDataTxPowerLevelKey] as? NSNumber
+
+            // Check name patterns
+            let nameLower = name.lowercased()
             let isLikelyGarmin = nameLower.contains("garmin") ||
                                  nameLower.contains("fenix") ||
                                  nameLower.contains("forerunner") ||
@@ -402,35 +690,96 @@ extension GarminManager: CBCentralManagerDelegate {
                                  nameLower.contains("venu") ||
                                  nameLower.contains("instinct") ||
                                  nameLower.contains("enduro") ||
-                                 nameLower.contains("hrm") ||  // HR monitor strap
-                                 nameLower.contains("heart")
+                                 nameLower.contains("hrm") ||
+                                 nameLower.contains("heart") ||
+                                 nameLower.contains("polar") ||
+                                 nameLower.contains("wahoo") ||
+                                 nameLower.contains("tickr")
 
-            // Log all discovered devices for debugging
-            Log.bluetooth.debug("BLE discovered: '\(name)' (RSSI: \(RSSI), likelyGarmin: \(isLikelyGarmin))")
+            // Detect by manufacturer ID
+            let isGarminManufacturer = manufacturerInfo.contains("GARMIN") ||
+                                       manufacturerInfo.contains("0x0087")
 
-            // Accept Garmin devices regardless of signal, others need good signal
-            guard isLikelyGarmin || RSSI.intValue > -75 else {
-                return
+            // Check if connectable
+            let isConnectable = advertisementData[CBAdvertisementDataIsConnectable] as? Bool ?? false
+
+            // Store peripheral reference
+            allDiscoveredPeripherals[peripheral.identifier] = peripheral
+
+            // Log EVERY device with close RSSI or any interesting property
+            let isStrong = RSSI.intValue > -70
+            let isInteresting = hasHRService || hasRSCService || hasGarminService ||
+                               isLikelyGarmin || isGarminManufacturer || isStrong
+
+            // Build detailed log message
+            var logMsg = "📱 '\(name)' RSSI:\(RSSI)"
+
+            if !allServices.isEmpty {
+                let serviceStrs = allServices.map { knownServiceName($0).isEmpty ? $0.uuidString : knownServiceName($0) }
+                logMsg += "\n   Servicios: [\(serviceStrs.joined(separator: ", "))]"
             }
 
-            // Skip completely unnamed devices
-            guard name != "Unknown" || isLikelyGarmin else {
-                return
+            if !manufacturerInfo.isEmpty {
+                logMsg += "\n   \(manufacturerInfo)"
             }
 
-            let device = DiscoveredDevice(
-                id: peripheral.identifier.uuidString,
-                name: name,
-                rssi: RSSI.intValue
-            )
+            if let tx = txPower {
+                logMsg += " TX:\(tx)"
+            }
 
-            if !discoveredDevices.contains(where: { $0.id == device.id }) {
+            if !isConnectable {
+                logMsg += " [No conectable]"
+            }
+
+            // Add flags
+            if hasHRService { logMsg += " ❤️HR" }
+            if hasRSCService { logMsg += " 🏃RSC" }
+            if hasGarminService { logMsg += " ⌚GARMIN-SVC" }
+            if isLikelyGarmin { logMsg += " ⌚Garmin?" }
+            if isGarminManufacturer { logMsg += " ⌚GARMIN-MFR!" }
+
+            // Log if interesting OR if it's an unknown device with decent signal
+            // Also log in deep scan mode for ANY connectable device
+            if isInteresting || (name == "Unknown" && RSSI.intValue > -65) || (self.isDeepScanMode && isConnectable) {
+                addDebugLog(logMsg)
+            }
+
+            // For Unknown devices with strong signal, add a detailed dump
+            if name == "Unknown" && RSSI.intValue > -55 && isConnectable {
+                addDebugLog("   ⚠️ Dispositivo desconocido con señal fuerte - podría ser Garmin!")
+                addDebugLog("   ID: \(peripheral.identifier.uuidString)")
+                // Log all advertisement keys
+                for (key, value) in advertisementData {
+                    addDebugLog("   Ad[\(key)]: \(value)")
+                }
+            }
+
+            // Add to device list for manual inspection
+            // Include ALL devices with decent signal for debugging
+            let shouldAdd = hasHRService || hasRSCService || hasGarminService ||
+                           isLikelyGarmin || isGarminManufacturer ||
+                           (isConnectable && RSSI.intValue > -75)
+
+            if shouldAdd && !discoveredDevices.contains(where: { $0.id == peripheral.identifier.uuidString }) {
+                var displayName = name
+                if isGarminManufacturer && name == "Unknown" {
+                    displayName = "Garmin Device (Unknown)"
+                }
+
+                let device = DiscoveredDevice(
+                    id: peripheral.identifier.uuidString,
+                    name: displayName,
+                    rssi: RSSI.intValue,
+                    hasHRService: hasHRService,
+                    hasRSCService: hasRSCService,
+                    isGarmin: isLikelyGarmin || isGarminManufacturer || hasGarminService
+                )
                 discoveredDevices.append(device)
-                Log.bluetooth.info("Added device: \(name) (ID: \(peripheral.identifier.uuidString))")
+                addDebugLog("➕ Añadido a lista: '\(displayName)' (conectable:\(isConnectable))")
 
-                // Auto-connect to first Garmin device found
-                if isLikelyGarmin && connectedPeripheral == nil {
-                    Log.bluetooth.info("Auto-connecting to Garmin device: \(name)")
+                // Auto-connect to definite HR/RSC devices
+                if (hasHRService || hasRSCService) && connectedPeripheral == nil && isConnectable {
+                    addDebugLog("🔗 Auto-conectando a dispositivo HR: '\(displayName)'")
                     stopScanning()
                     updateConnectionState(.connecting)
                     central.connect(peripheral, options: nil)
@@ -439,44 +788,31 @@ extension GarminManager: CBCentralManagerDelegate {
         }
     }
 
-    nonisolated func centralManager(
-        _ central: CBCentralManager,
-        didConnect peripheral: CBPeripheral
-    ) {
+    nonisolated func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
         Task { @MainActor in
-            Log.bluetooth.info("Connected to: \(peripheral.name ?? "Unknown")")
+            addDebugLog("✅ CONECTADO a: '\(peripheral.name ?? "Unknown")'")
 
             connectedPeripheral = peripheral
             peripheral.delegate = self
             reconnectAttempt = 0
 
             saveLastConnectedDevice(peripheral)
-            updateConnectionState(.connected(deviceName: peripheral.name ?? "Garmin"))
+            updateConnectionState(.connected(deviceName: peripheral.name ?? "HR Device"))
 
-            // Discover services
-            peripheral.discoverServices([
-                ServiceUUID.heartRate,
-                ServiceUUID.runningSpeedCadence
-            ])
+            // Discover ALL services first to see what's available
+            addDebugLog("🔍 Descubriendo servicios...")
+            peripheral.discoverServices(nil)  // Discover ALL services
         }
     }
 
-    nonisolated func centralManager(
-        _ central: CBCentralManager,
-        didFailToConnect peripheral: CBPeripheral,
-        error: Error?
-    ) {
+    nonisolated func centralManager(_ central: CBCentralManager, didFailToConnect peripheral: CBPeripheral, error: Error?) {
         Task { @MainActor in
-            Log.bluetooth.error("Failed to connect: \(error?.localizedDescription ?? "unknown")")
+            addDebugLog("❌ Fallo de conexión: \(error?.localizedDescription ?? "desconocido")")
             handleDisconnection(peripheral: peripheral, error: error)
         }
     }
 
-    nonisolated func centralManager(
-        _ central: CBCentralManager,
-        didDisconnectPeripheral peripheral: CBPeripheral,
-        error: Error?
-    ) {
+    nonisolated func centralManager(_ central: CBCentralManager, didDisconnectPeripheral peripheral: CBPeripheral, error: Error?) {
         Task { @MainActor in
             handleDisconnection(peripheral: peripheral, error: error)
         }
@@ -485,100 +821,170 @@ extension GarminManager: CBCentralManagerDelegate {
 
 // MARK: - CBPeripheralDelegate
 extension GarminManager: CBPeripheralDelegate {
-    nonisolated func peripheral(
-        _ peripheral: CBPeripheral,
-        didDiscoverServices error: Error?
-    ) {
+    nonisolated func peripheral(_ peripheral: CBPeripheral, didDiscoverServices error: Error?) {
         Task { @MainActor in
             if let error = error {
-                Log.bluetooth.error("Service discovery error: \(error)")
+                addDebugLog("❌ Error descubriendo servicios: \(error.localizedDescription)")
                 return
             }
 
-            guard let services = peripheral.services else { return }
+            guard let services = peripheral.services else {
+                addDebugLog("⚠️ No se encontraron servicios")
+                return
+            }
 
+            addDebugLog("📋 Servicios encontrados: \(services.count)")
             for service in services {
-                Log.bluetooth.debug("Discovered service: \(service.uuid)")
+                let name = knownServiceName(service.uuid)
+                addDebugLog("   → \(service.uuid) \(name)")
                 peripheral.discoverCharacteristics(nil, for: service)
             }
         }
     }
 
-    nonisolated func peripheral(
-        _ peripheral: CBPeripheral,
-        didDiscoverCharacteristicsFor service: CBService,
-        error: Error?
-    ) {
+    nonisolated func peripheral(_ peripheral: CBPeripheral, didDiscoverCharacteristicsFor service: CBService, error: Error?) {
         Task { @MainActor in
             if let error = error {
-                Log.bluetooth.error("Characteristic discovery error: \(error)")
+                addDebugLog("❌ Error características: \(error.localizedDescription)")
                 return
             }
 
             guard let characteristics = service.characteristics else { return }
 
-            for characteristic in characteristics {
-                Log.bluetooth.debug("Discovered characteristic: \(characteristic.uuid)")
+            let serviceName = knownServiceName(service.uuid)
+            addDebugLog("📋 Características de \(serviceName):")
 
-                if characteristic.uuid == ServiceUUID.heartRateMeasurement {
-                    heartRateCharacteristic = characteristic
-                    peripheral.setNotifyValue(true, for: characteristic)
-                    Log.bluetooth.info("Subscribed to heart rate notifications")
+            for char in characteristics {
+                let charName = knownCharacteristicName(char.uuid)
+                let props = characteristicPropertiesString(char.properties)
+                addDebugLog("   → \(char.uuid) \(charName) [\(props)]")
+
+                // Subscribe to HR measurement (standard)
+                if char.uuid == ServiceUUID.heartRateMeasurement {
+                    heartRateCharacteristic = char
+                    peripheral.setNotifyValue(true, for: char)
+                    addDebugLog("   ❤️ Suscrito a Heart Rate estándar!")
                 }
 
-                if characteristic.uuid == ServiceUUID.rscMeasurement {
-                    rscCharacteristic = characteristic
-                    peripheral.setNotifyValue(true, for: characteristic)
-                    Log.bluetooth.info("Subscribed to RSC notifications")
+                // Subscribe to RSC measurement (standard)
+                if char.uuid == ServiceUUID.rscMeasurement {
+                    rscCharacteristic = char
+                    peripheral.setNotifyValue(true, for: char)
+                    addDebugLog("   🏃 Suscrito a RSC estándar!")
+                }
+
+                // GARMIN PROPRIETARY: Subscribe to ALL characteristics with Notify
+                // These might contain HR/sensor data in Garmin's format
+                if char.properties.contains(.notify) {
+                    let uuidStr = char.uuid.uuidString.uppercased()
+
+                    // Garmin sensor data characteristics (6A4E25xx range)
+                    if uuidStr.hasPrefix("6A4E25") || uuidStr.hasPrefix("6A4E28") ||
+                       uuidStr.hasPrefix("6A4ECD") {
+                        peripheral.setNotifyValue(true, for: char)
+                        addDebugLog("   📡 Suscrito a Garmin: \(uuidStr.prefix(12))...")
+                    }
                 }
             }
         }
     }
 
-    nonisolated func peripheral(
-        _ peripheral: CBPeripheral,
-        didUpdateValueFor characteristic: CBCharacteristic,
-        error: Error?
-    ) {
+    nonisolated func peripheral(_ peripheral: CBPeripheral, didUpdateValueFor characteristic: CBCharacteristic, error: Error?) {
         Task { @MainActor in
             if let error = error {
-                Log.bluetooth.error("Characteristic update error: \(error)")
+                addDebugLog("❌ Error actualizando valor: \(error.localizedDescription)")
                 return
             }
 
             guard let data = characteristic.value else { return }
 
+            let uuidStr = characteristic.uuid.uuidString.uppercased()
+
+            // Standard Heart Rate
             if characteristic.uuid == ServiceUUID.heartRateMeasurement {
                 if let bpm = parseHeartRate(from: data) {
-                    // Validate HR range
-                    guard bpm >= 30 && bpm <= 250 else {
-                        Log.bluetooth.warning("Invalid HR filtered: \(bpm)")
-                        return
-                    }
-                    Log.logHeartRate(bpm, context: "Garmin")
+                    guard bpm >= 30 && bpm <= 250 else { return }
+                    addDebugLog("❤️ HR estándar: \(bpm) bpm")
                     heartRateSubject.send(bpm)
                 }
+                return
             }
 
+            // Standard RSC
             if characteristic.uuid == ServiceUUID.rscMeasurement {
                 parseRSCMeasurement(from: data)
+                return
+            }
+
+            // GARMIN PROPRIETARY DATA - try to extract HR
+            if uuidStr.hasPrefix("6A4E") {
+                parseGarminProprietaryData(from: data, characteristic: uuidStr)
             }
         }
     }
 
-    nonisolated func peripheral(
-        _ peripheral: CBPeripheral,
-        didUpdateNotificationStateFor characteristic: CBCharacteristic,
-        error: Error?
-    ) {
+    /// Try to parse Garmin's proprietary data format
+    private func parseGarminProprietaryData(from data: Data, characteristic: String) {
+        let bytes = [UInt8](data)
+        guard bytes.count >= 2 else { return }
+
+        let hex = bytes.prefix(8).map { String(format: "%02X", $0) }.joined(separator: " ")
+        addDebugLog("📦 Garmin [\(characteristic.prefix(8))]: \(hex)...")
+
+        // Try byte 1 as HR (like standard HR service format)
+        let possibleHR = Int(bytes[1])
+        if possibleHR >= 40 && possibleHR <= 200 {
+            addDebugLog("   ❤️ HR detectado: \(possibleHR) bpm")
+            heartRateSubject.send(possibleHR)
+        }
+    }
+
+    nonisolated func peripheral(_ peripheral: CBPeripheral, didUpdateNotificationStateFor characteristic: CBCharacteristic, error: Error?) {
         Task { @MainActor in
             if let error = error {
-                Log.bluetooth.error("Notification state error: \(error)")
+                addDebugLog("❌ Error notificación: \(error.localizedDescription)")
                 return
             }
 
-            Log.bluetooth.debug("Notification state updated for \(characteristic.uuid): \(characteristic.isNotifying)")
+            let charName = knownCharacteristicName(characteristic.uuid)
+            addDebugLog("🔔 Notificaciones \(characteristic.isNotifying ? "ON" : "OFF") para \(charName)")
         }
+    }
+
+    // MARK: - Helper: Known Service Names
+    private func knownServiceName(_ uuid: CBUUID) -> String {
+        switch uuid.uuidString.uppercased() {
+        case "180D": return "(Heart Rate)"
+        case "1814": return "(Running Speed & Cadence)"
+        case "180A": return "(Device Information)"
+        case "180F": return "(Battery)"
+        case "1800": return "(Generic Access)"
+        case "1801": return "(Generic Attribute)"
+        default: return ""
+        }
+    }
+
+    private func knownCharacteristicName(_ uuid: CBUUID) -> String {
+        switch uuid.uuidString.uppercased() {
+        case "2A37": return "(HR Measurement)"
+        case "2A38": return "(Body Sensor Location)"
+        case "2A39": return "(HR Control Point)"
+        case "2A53": return "(RSC Measurement)"
+        case "2A54": return "(RSC Feature)"
+        case "2A19": return "(Battery Level)"
+        case "2A29": return "(Manufacturer Name)"
+        case "2A24": return "(Model Number)"
+        default: return ""
+        }
+    }
+
+    private func characteristicPropertiesString(_ props: CBCharacteristicProperties) -> String {
+        var result: [String] = []
+        if props.contains(.read) { result.append("R") }
+        if props.contains(.write) { result.append("W") }
+        if props.contains(.notify) { result.append("N") }
+        if props.contains(.indicate) { result.append("I") }
+        return result.joined(separator: ",")
     }
 }
 

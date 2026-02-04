@@ -326,6 +326,7 @@ struct ProfileView: View {
 
 struct OnboardingView: View {
     @EnvironmentObject private var appState: AppState
+    @StateObject private var garminManager = GarminManager.shared
     @State private var currentStep: OnboardingStep = .welcome
     @State private var showGarminPairing = false
 
@@ -346,6 +347,15 @@ struct OnboardingView: View {
         }
         .sheet(isPresented: $showGarminPairing) {
             GarminPairingView()
+        }
+        .onChange(of: garminManager.connectionState) { _, newState in
+            // Auto-complete onboarding when Garmin connects
+            if case .connected = newState {
+                Task {
+                    try? await Task.sleep(for: .seconds(1))
+                    appState.completeOnboarding()
+                }
+            }
         }
     }
 

@@ -61,6 +61,9 @@ struct DiscoveredDevice: Identifiable, Equatable {
     let id: String
     let name: String
     let rssi: Int  // Signal strength
+    var hasHRService: Bool = false
+    var hasRSCService: Bool = false
+    var isGarmin: Bool = false
 
     var signalStrength: SignalStrength {
         switch rssi {
@@ -69,6 +72,28 @@ struct DiscoveredDevice: Identifiable, Equatable {
         case -85..<(-70): return .fair
         default: return .weak
         }
+    }
+
+    var statusIcon: String {
+        if isGarmin { return "applewatch.radiowaves.left.and.right" }
+        if hasHRService { return "heart.fill" }
+        if hasRSCService { return "figure.run" }
+        return "antenna.radiowaves.left.and.right"
+    }
+
+    var statusColor: String {
+        if isGarmin { return "orange" }
+        if hasHRService || hasRSCService { return "green" }
+        return "blue"
+    }
+
+    var subtitle: String {
+        var parts: [String] = []
+        if isGarmin { parts.append("Garmin") }
+        if hasHRService { parts.append("HR") }
+        if hasRSCService { parts.append("RSC") }
+        if parts.isEmpty { return "Desconocido" }
+        return parts.joined(separator: " + ")
     }
 
     enum SignalStrength {

@@ -303,8 +303,13 @@ final class HRDataService: ObservableObject {
             await garminManager.startScanning()
         }
 
-        // Also start HealthKit as backup
-        try await healthKitManager.startHeartRateMonitoring()
+        // Also start HealthKit as backup (non-blocking - may fail without paid dev account)
+        do {
+            try await healthKitManager.startHeartRateMonitoring()
+        } catch {
+            Log.health.warning("HealthKit HR monitoring failed (expected without paid account): \(error)")
+            // Continue anyway - Garmin is the primary source
+        }
 
         Log.health.info("HRDataService started")
     }
