@@ -67,6 +67,9 @@ struct HomeView: View {
 
                     // Training Plans Section
                     plansSection
+
+                    // Version Footer
+                    versionFooter
                 }
                 .padding()
             }
@@ -153,6 +156,23 @@ struct HomeView: View {
                 }
             }
         }
+    }
+
+    // MARK: - Version Footer
+    private var versionFooter: some View {
+        VStack(spacing: DesignTokens.Spacing.xs) {
+            Divider()
+                .padding(.vertical, DesignTokens.Spacing.md)
+
+            Text("IntervalPro v\(AppVersion.version) (\(AppVersion.build))")
+                .font(.caption2)
+                .foregroundStyle(.tertiary)
+
+            Text(AppVersion.buildDate)
+                .font(.caption2)
+                .foregroundStyle(.quaternary)
+        }
+        .padding(.top, DesignTokens.Spacing.lg)
     }
 }
 

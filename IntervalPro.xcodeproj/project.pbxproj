@@ -55,6 +55,7 @@
 		FA5CEBAD52D5267BC2C406A6 /* SessionRepositoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34EBF75ECD44EB7FB28461A4 /* SessionRepositoryTests.swift */; };
 		PEDBUILD01A2B3C4D5E6F7G8 /* PedometerService.swift in Sources */ = {isa = PBXBuildFile; fileRef = PEDOMETER01A2B3C4D5E6F7G8 /* PedometerService.swift */; };
 		COACHBUILD01A2B3C4D5E6F7G /* CoachingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = COACHING01A2B3C4D5E6F7G8H /* CoachingService.swift */; };
+		APPVERBUILD01A2B3C4D5E6F7 /* AppVersion.swift in Sources */ = {isa = PBXBuildFile; fileRef = APPVERSION01A2B3C4D5E6F7G /* AppVersion.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -120,6 +121,7 @@
 		FD6CD68DC235FFE45481FD83 /* IntervalPro.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = IntervalPro.entitlements; sourceTree = "<group>"; };
 		PEDOMETER01A2B3C4D5E6F7G8 /* PedometerService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PedometerService.swift; sourceTree = "<group>"; };
 		COACHING01A2B3C4D5E6F7G8H /* CoachingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoachingService.swift; sourceTree = "<group>"; };
+		APPVERSION01A2B3C4D5E6F7G /* AppVersion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppVersion.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -206,6 +208,7 @@
 		356D86EC8015A7253DE93BDA /* Utilities */ = {
 			isa = PBXGroup;
 			children = (
+				APPVERSION01A2B3C4D5E6F7G /* AppVersion.swift */,
 				4104BCE247D8EBBC7182EDE6 /* Logger.swift */,
 			);
 			path = Utilities;
@@ -620,6 +623,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				CCBB05216BE5F2ADF950770B /* AppState.swift in Sources */,
+				APPVERBUILD01A2B3C4D5E6F7 /* AppVersion.swift in Sources */,
 				F67295C99ABDBF772E9D318E /* AppleMusicController.swift in Sources */,
 				DD4C17B12549EAE062A719BB /* AudioEngineProtocol.swift in Sources */,
 				22CF5C83010F0C878BB49C05 /* ContentView.swift in Sources */,
