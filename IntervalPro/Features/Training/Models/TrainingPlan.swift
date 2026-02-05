@@ -293,5 +293,31 @@ extension TrainingPlan {
         isDefault: true
     )
 
-    static let defaultTemplates: [TrainingPlan] = [recommended, beginner, intermediate, advanced]
+    /// Walking workout: 50 min steady pace
+    /// Ritmo objetivo: 9:00-9:30/km (6.5-7 km/h)
+    static let walking = TrainingPlan(
+        name: "Caminata 50min",
+        workZone: HeartRateZone(
+            targetBPM: 115,           // Cadencia caminata: 110-120 SPM
+            toleranceBPM: 10,
+            targetPace: 545,          // ~9:05/km (6.6 km/h)
+            paceTolerance: 25         // Permite 8:40 - 9:30/km
+        ),
+        restZone: HeartRateZone(      // No hay descanso, mismo ritmo
+            targetBPM: 115,
+            toleranceBPM: 10,
+            targetPace: 545,
+            paceTolerance: 25
+        ),
+        workDuration: 3000,           // 50 min = 3000 seg
+        restDuration: 0,              // Sin descanso
+        seriesCount: 1,               // Una sola serie continua
+        warmupDuration: nil,          // Sin calentamiento
+        warmupZone: nil,
+        cooldownDuration: nil,        // Sin enfriamiento
+        cooldownZone: nil,
+        isDefault: true
+    )
+
+    static let defaultTemplates: [TrainingPlan] = [recommended, beginner, intermediate, advanced, walking]
 }
