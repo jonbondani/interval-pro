@@ -94,7 +94,7 @@ extension TrainingSessionEntity {
 
     static func fetchRecent(limit: Int = 10) -> NSFetchRequest<TrainingSessionEntity> {
         let request = fetchRequest()
-        request.predicate = NSPredicate(format: "isCompleted == YES")
+        // Fetch all sessions (completed and partial) sorted by date
         request.sortDescriptors = [
             NSSortDescriptor(keyPath: \TrainingSessionEntity.startDate, ascending: false)
         ]

@@ -107,8 +107,10 @@ struct TrainingView: View {
     private var topBar: some View {
         HStack {
             Button {
-                Task {
-                    await viewModel.stopWorkout()
+                // Only show confirmation if workout has started
+                if viewModel.isActive || viewModel.totalElapsedTime > 0 {
+                    showStopConfirmation = true
+                } else {
                     dismiss()
                 }
             } label: {

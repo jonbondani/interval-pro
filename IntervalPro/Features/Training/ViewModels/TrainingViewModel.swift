@@ -640,7 +640,10 @@ final class TrainingViewModel: ObservableObject {
 
     func saveSession(completed: Bool) async {
         finalizeCurrentInterval()
-        guard var session = currentSession else { return }
+        guard var session = currentSession, totalElapsedTime >= 5 else {
+            Log.training.info("No session to save or too short")
+            return
+        }
         session.endDate = Date()
         session.isCompleted = completed
         session.intervals = intervalRecords
@@ -653,7 +656,7 @@ final class TrainingViewModel: ObservableObject {
         do {
             try await sessionRepository.save(session)
             self.currentSession = session
-            Log.training.info("Session saved: score \(session.score)")
+            Log.training.info("Session saved: \(session.planName), score=\(session.score)")
         } catch {
             Log.training.error("Failed to save session: \(error)")
         }
@@ -679,13 +682,8 @@ final class TrainingViewModel: ObservableObject {
 
     func updatePaceComparison(currentPace: Double) {
         guard currentPace > 0 else { paceVsBest = 0; return }
-        if let best = bestSession, let bestAvgPace = best.avgPace, bestAvgPace > 0 {
-            bestPace = bestAvgPace
-            paceVsBest = currentPace - bestAvgPace
-        } else {
-            bestPace = 0
-            paceVsBest = 0
-        }
+        if let best = bestSession, let p = best.avgPace, p > 0 { bestPace = p; paceVsBest = currentPace - p }
+        else { bestPace = 0; paceVsBest = 0 }
     }
 }
 
