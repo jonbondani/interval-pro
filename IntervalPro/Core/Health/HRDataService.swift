@@ -418,6 +418,14 @@ final class HRDataService: ObservableObject {
         currentHeartRate = heartRate
         isReceivingData = true
 
+        // Simulate pace based on cadence (rough approximation)
+        // Higher cadence = faster pace
+        // Cadence 160 SPM ≈ 6:00/km (360 sec), 180 SPM ≈ 5:00/km (300 sec)
+        // Formula: pace = 660 - (cadence * 2) -> gives reasonable running paces
+        let simulatedPace = max(240, min(600, 660 - (cadence * 2)))
+        currentPace = Double(simulatedPace)
+        currentSpeed = 3600.0 / Double(simulatedPace)  // km/h from sec/km
+
         // Update zone status based on CADENCE (not heart rate)
         if let zone = targetZone {
             currentZoneStatus = zone.status(for: cadence)

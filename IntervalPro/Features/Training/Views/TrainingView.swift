@@ -40,7 +40,9 @@ struct TrainingView: View {
                         cadenceDisplay       // Cadence with zone tracking
                         heartRateDisplay     // FC - just display
                         metricsRow
-                        paceComparisonSection
+                        if viewModel.isGarminConnected {
+                            paceComparisonSection
+                        }
                         seriesProgress
                     }
                     .padding(.horizontal)
@@ -306,48 +308,54 @@ struct TrainingView: View {
         .clipShape(RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.medium))
     }
 
-    // MARK: - Heart Rate Display (FC - just for info)
+    // MARK: - Heart Rate Display (FC - only when Garmin connected)
+    @ViewBuilder
     private var heartRateDisplay: some View {
-        HStack(spacing: DesignTokens.Spacing.sm) {
-            Image(systemName: "heart.fill")
-                .font(.title3)
-                .foregroundStyle(.red)
-                .symbolEffect(.pulse, options: .repeating, value: viewModel.currentHeartRate)
+        if viewModel.isGarminConnected {
+            HStack(spacing: DesignTokens.Spacing.sm) {
+                Image(systemName: "heart.fill")
+                    .font(.title3)
+                    .foregroundStyle(.red)
+                    .symbolEffect(.pulse, options: .repeating, value: viewModel.currentHeartRate)
 
-            Text("\(viewModel.currentHeartRate)")
-                .font(.system(size: 28, weight: .bold, design: .rounded))
-                .contentTransition(.numericText())
+                Text("\(viewModel.currentHeartRate)")
+                    .font(.system(size: 28, weight: .bold, design: .rounded))
+                    .contentTransition(.numericText())
 
-            Text("lpm")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+                Text("lpm")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
 
-            Spacer()
+                Spacer()
 
-            Text("FC")
-                .font(.caption.weight(.medium))
-                .foregroundStyle(.secondary)
+                Text("FC")
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.vertical, DesignTokens.Spacing.xs)
+            .padding(.horizontal, DesignTokens.Spacing.md)
+            .background(Color(.secondarySystemBackground))
+            .clipShape(RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.small))
         }
-        .padding(.vertical, DesignTokens.Spacing.xs)
-        .padding(.horizontal, DesignTokens.Spacing.md)
-        .background(Color(.secondarySystemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.small))
+        // When not connected to Garmin, don't show HR widget
     }
 
     // MARK: - Metrics Row
     private var metricsRow: some View {
         HStack(spacing: DesignTokens.Spacing.lg) {
             MetricCard(
-                value: viewModel.formattedPace,
-                label: "PACE",
+                value: viewModel.isGarminConnected ? viewModel.formattedPace : "~\(viewModel.formattedPace)",
+                label: viewModel.isGarminConnected ? "PACE" : "PACE (est)",
                 icon: "figure.run"
             )
 
-            MetricCard(
-                value: viewModel.formattedDistance,
-                label: "DIST",
-                icon: "location"
-            )
+            if viewModel.isGarminConnected {
+                MetricCard(
+                    value: viewModel.formattedDistance,
+                    label: "DIST",
+                    icon: "location"
+                )
+            }
         }
     }
 
