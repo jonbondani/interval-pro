@@ -40,9 +40,7 @@ struct TrainingView: View {
                         cadenceDisplay       // Cadence with zone tracking
                         heartRateDisplay     // FC - just display
                         metricsRow
-                        if viewModel.isGarminConnected {
-                            paceComparisonSection
-                        }
+                        paceComparisonSection
                         seriesProgress
                     }
                     .padding(.horizontal)
@@ -97,10 +95,10 @@ struct TrainingView: View {
             // Data source indicator
             HStack(spacing: 4) {
                 Circle()
-                    .fill(viewModel.isGarminConnected ? Color.green : Color.orange)
+                    .fill(dataSourceColor)
                     .frame(width: 8, height: 8)
 
-                Text(viewModel.isGarminConnected ? "Garmin" : "Simulado")
+                Text(dataSourceText)
                     .font(.caption2)
                     .foregroundStyle(.secondary)
             }
@@ -308,10 +306,11 @@ struct TrainingView: View {
         .clipShape(RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.medium))
     }
 
-    // MARK: - Heart Rate Display (FC - only when Garmin connected)
+    // MARK: - Heart Rate Display (FC - only with real data, not simulation)
     @ViewBuilder
     private var heartRateDisplay: some View {
         if viewModel.isGarminConnected {
+            // Show real HR from Garmin
             HStack(spacing: DesignTokens.Spacing.sm) {
                 Image(systemName: "heart.fill")
                     .font(.title3)
@@ -337,25 +336,23 @@ struct TrainingView: View {
             .background(Color(.secondarySystemBackground))
             .clipShape(RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.small))
         }
-        // When not connected to Garmin, don't show HR widget
+        // When not connected to Garmin, don't show HR widget (no real HR data)
     }
 
     // MARK: - Metrics Row
     private var metricsRow: some View {
         HStack(spacing: DesignTokens.Spacing.lg) {
             MetricCard(
-                value: viewModel.isGarminConnected ? viewModel.formattedPace : "~\(viewModel.formattedPace)",
-                label: viewModel.isGarminConnected ? "PACE" : "PACE (est)",
+                value: viewModel.formattedPace,
+                label: "PACE",
                 icon: "figure.run"
             )
 
-            if viewModel.isGarminConnected {
-                MetricCard(
-                    value: viewModel.formattedDistance,
-                    label: "DIST",
-                    icon: "location"
-                )
-            }
+            MetricCard(
+                value: viewModel.formattedDistance,
+                label: "DIST",
+                icon: "location"
+            )
         }
     }
 
@@ -443,6 +440,26 @@ struct TrainingView: View {
             return .red
         } else {
             return .orange
+        }
+    }
+
+    private var dataSourceText: String {
+        if viewModel.isGarminConnected {
+            return "Garmin"
+        } else if viewModel.isSimulationMode {
+            return "Simulado"
+        } else {
+            return "iPhone"
+        }
+    }
+
+    private var dataSourceColor: Color {
+        if viewModel.isGarminConnected {
+            return .green
+        } else if viewModel.isSimulationMode {
+            return .orange
+        } else {
+            return .blue  // iPhone sensors
         }
     }
 

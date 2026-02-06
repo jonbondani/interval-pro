@@ -21,6 +21,20 @@ final class PedometerService: ObservableObject {
         cadenceSubject.eraseToAnyPublisher()
     }
 
+    private let distanceSubject = PassthroughSubject<Double, Never>()
+    var distancePublisher: AnyPublisher<Double, Never> {
+        distanceSubject.eraseToAnyPublisher()
+    }
+
+    private let paceSubject = PassthroughSubject<Double, Never>()
+    var pacePublisher: AnyPublisher<Double, Never> {
+        paceSubject.eraseToAnyPublisher()
+    }
+
+    // For pace calculation
+    private var lastDistance: Double = 0
+    private var lastDistanceTime: Date?
+
     // MARK: - Private
     private let pedometer = CMPedometer()
     private var startDate: Date?
@@ -46,6 +60,8 @@ final class PedometerService: ObservableObject {
         totalSteps = 0
         distance = 0
         currentCadence = 0
+        lastDistance = 0
+        lastDistanceTime = nil
 
         Log.health.info("Pedometer started")
 
@@ -82,7 +98,12 @@ final class PedometerService: ObservableObject {
 
         // Update distance if available
         if let dist = data.distance {
-            distance = dist.doubleValue
+            let newDistance = dist.doubleValue
+            distance = newDistance
+            distanceSubject.send(newDistance)
+
+            // Calculate pace (sec/km) based on distance change over time
+            calculatePace(currentDistance: newDistance)
         }
 
         // Update cadence - CMPedometer provides currentCadence in steps/second
@@ -98,6 +119,37 @@ final class PedometerService: ObservableObject {
                 Log.health.debug("Cadence: \(spm) SPM, Steps: \(steps)")
             }
         }
+    }
+
+    /// Calculate pace in sec/km based on distance changes
+    private func calculatePace(currentDistance: Double) {
+        let now = Date()
+
+        guard let lastTime = lastDistanceTime else {
+            lastDistance = currentDistance
+            lastDistanceTime = now
+            return
+        }
+
+        let timeDelta = now.timeIntervalSince(lastTime)
+        let distanceDelta = currentDistance - lastDistance
+
+        // Need at least 5 seconds and 5 meters for meaningful pace
+        guard timeDelta >= 5, distanceDelta >= 5 else { return }
+
+        // Calculate pace: seconds per kilometer
+        // pace = time / distance * 1000 (convert m to km)
+        let paceSecPerKm = (timeDelta / distanceDelta) * 1000
+
+        // Validate pace range (2:00/km to 15:00/km = 120 to 900 sec/km)
+        if paceSecPerKm >= 120 && paceSecPerKm <= 900 {
+            paceSubject.send(paceSecPerKm)
+            Log.health.debug("Pace: \(Int(paceSecPerKm)) sec/km (\(paceSecPerKm.formattedPace))")
+        }
+
+        // Update last values
+        lastDistance = currentDistance
+        lastDistanceTime = now
     }
 
     // MARK: - Permissions

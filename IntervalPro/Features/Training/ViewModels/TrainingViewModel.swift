@@ -30,6 +30,7 @@ final class TrainingViewModel: ObservableObject {
     @Published var currentSpeed: Double = 0
     @Published var totalDistance: Double = 0
     @Published var avgHeartRate: Int = 0
+    @Published var isSimulationMode: Bool = false
 
     // MARK: - Published State - Coaching (via CoachingService)
     @Published var coachingStatus: CoachingStatus?
@@ -184,6 +185,8 @@ final class TrainingViewModel: ObservableObject {
         hrDataService.$currentCadence.assign(to: &$currentCadence)
         hrDataService.$currentPace.assign(to: &$currentPace)
         hrDataService.$currentSpeed.assign(to: &$currentSpeed)
+        hrDataService.$totalDistance.assign(to: &$totalDistance)
+        hrDataService.$isSimulationMode.assign(to: &$isSimulationMode)
 
         garminManager.connectionStatePublisher
             .map { $0.isConnected }
@@ -328,16 +331,19 @@ final class TrainingViewModel: ObservableObject {
             try? await Task.sleep(for: .seconds(2))
         }
 
-        // Start data monitoring
+        // Start data monitoring - prioritize real data sources
         if garminManager.isConnected {
-            Log.training.info("Garmin connected - using real data")
+            Log.training.info("Garmin connected - using Garmin data")
+            try await hrDataService.start()
+        } else if PedometerService.shared.isAvailable {
+            // Use iPhone pedometer for cadence/distance/pace
+            Log.training.info("Using iPhone sensors (pedometer + GPS)")
             try await hrDataService.start()
         } else {
-            // Enable simulation mode for testing without Garmin
-            // Start with warmup zone if available, otherwise first work zone
+            // No real data sources available - enable simulation
             let initialZone = plan.warmupZone ?? plan.workZone
             hrDataService.enableSimulation(targetHR: initialZone.targetCadence)
-            Log.training.info("No Garmin connected - using simulated data (cadence target: \(initialZone.targetCadence) SPM)")
+            Log.training.info("No sensors available - using simulated data (cadence target: \(initialZone.targetCadence) SPM)")
         }
 
         // Start zone tracking

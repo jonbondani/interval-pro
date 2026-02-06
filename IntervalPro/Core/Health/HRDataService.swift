@@ -19,6 +19,7 @@ final class HRDataService: ObservableObject {
     @Published private(set) var currentPace: Double = 0  // sec/km
     @Published private(set) var currentSpeed: Double = 0  // km/h
     @Published private(set) var currentCadence: Int = 0   // steps per minute (SPM)
+    @Published private(set) var totalDistance: Double = 0  // meters
 
     // MARK: - Zone Tracking (based on CADENCE, not heart rate)
     @Published private(set) var currentZoneStatus: ZoneStatus = .inZone
@@ -111,6 +112,29 @@ final class HRDataService: ObservableObject {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] cadence in
                 self?.processCadence(cadence, source: .pedometer)
+            }
+            .store(in: &cancellables)
+
+        // Subscribe to iPhone pedometer pace (fallback when no Garmin)
+        pedometerService.pacePublisher
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] pace in
+                guard let self = self else { return }
+                // Only use pedometer pace if Garmin is not connected
+                if !self.garminManager.isConnected {
+                    self.currentPace = pace
+                    self.currentSpeed = 3600.0 / pace  // Convert sec/km to km/h
+                }
+            }
+            .store(in: &cancellables)
+
+        // Subscribe to iPhone pedometer distance
+        pedometerService.distancePublisher
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] distance in
+                guard let self = self else { return }
+                // Always update total distance from pedometer
+                self.totalDistance = distance
             }
             .store(in: &cancellables)
 
@@ -350,6 +374,7 @@ final class HRDataService: ObservableObject {
         currentPace = 0
         currentSpeed = 0
         currentCadence = 0
+        totalDistance = 0
         timeInZone = 0
         recentHRValues.removeAll()
     }
