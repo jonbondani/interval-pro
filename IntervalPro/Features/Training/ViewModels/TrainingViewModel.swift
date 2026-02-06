@@ -31,6 +31,11 @@ final class TrainingViewModel: ObservableObject {
     @Published var totalDistance: Double = 0
     @Published var avgHeartRate: Int = 0
     @Published var isSimulationMode: Bool = false
+    @Published var sessionSteps: Int = 0     // Steps in this session (not accumulated)
+
+    // MARK: - Published State - Audio Volume
+    @Published var metronomeVolume: Float = 0.7
+    @Published var voiceVolume: Float = 0.9
 
     // MARK: - Published State - Coaching (via CoachingService)
     @Published var coachingStatus: CoachingStatus?
@@ -59,24 +64,27 @@ final class TrainingViewModel: ObservableObject {
     // MARK: - Dependencies
     private let intervalTimer: IntervalTimer
     private let hrDataService: HRDataService
-    private let audioEngine: AudioEngineProtocol
+    let audioEngine: AudioEngineProtocol
     private let garminManager: GarminManaging
     private let healthKitManager: HealthKitManaging
-    private let sessionRepository: SessionRepositoryProtocol
     private let musicController: UnifiedMusicController
     private let coachingService: CoachingService
 
-    // MARK: - Session Tracking
-    private var currentSession: TrainingSession?
-    private var currentIntervalRecord: IntervalRecord?
-    private var hrSamples: [HRSample] = []
-    private var intervalRecords: [IntervalRecord] = []
+    // MARK: - Session Tracking (internal for extension access)
+    var currentSession: TrainingSession?
+    var currentIntervalRecord: IntervalRecord?
+    var hrSamples: [HRSample] = []
+    var intervalRecords: [IntervalRecord] = []
 
-    // MARK: - Stats
-    private var hrSum: Int = 0
-    private var hrCount: Int = 0
-    private var maxHeartRate: Int = 0
-    private var minHeartRate: Int = 999
+    // MARK: - Stats (internal for extension access)
+    var hrSum: Int = 0
+    var hrCount: Int = 0
+    var maxHeartRate: Int = 0
+    var minHeartRate: Int = 999
+
+    // Internal access to session repository
+    var sessionRepository: SessionRepositoryProtocol { _sessionRepository }
+    private let _sessionRepository: SessionRepositoryProtocol
 
     // MARK: - Subscriptions
     private var cancellables = Set<AnyCancellable>()
@@ -97,6 +105,16 @@ final class TrainingViewModel: ObservableObject {
 
     var isActive: Bool {
         timerState == .running || timerState == .paused
+    }
+
+    var isWalkingWorkout: Bool {
+        plan?.isWalkingWorkout ?? false
+    }
+
+    var formattedSessionSteps: String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        return formatter.string(from: NSNumber(value: sessionSteps)) ?? "\(sessionSteps)"
     }
 
     var formattedBestPace: String {
@@ -151,7 +169,7 @@ final class TrainingViewModel: ObservableObject {
         self.audioEngine = audioEngine ?? MetronomeEngine.shared
         self.garminManager = garminManager ?? GarminManager.shared
         self.healthKitManager = healthKitManager ?? HealthKitManager.shared
-        self.sessionRepository = sessionRepository ?? SessionRepository()
+        self._sessionRepository = sessionRepository ?? SessionRepository()
         self.musicController = musicController ?? UnifiedMusicController.shared
         self.coachingService = coachingService ?? CoachingService.shared
 
@@ -186,6 +204,7 @@ final class TrainingViewModel: ObservableObject {
         hrDataService.$currentPace.assign(to: &$currentPace)
         hrDataService.$currentSpeed.assign(to: &$currentSpeed)
         hrDataService.$totalDistance.assign(to: &$totalDistance)
+        hrDataService.$sessionSteps.assign(to: &$sessionSteps)
         hrDataService.$isSimulationMode.assign(to: &$isSimulationMode)
 
         garminManager.connectionStatePublisher
@@ -528,109 +547,6 @@ final class TrainingViewModel: ObservableObject {
         // which combines cadence AND pace, not just cadence
     }
 
-    // MARK: - Interval Recording
-    private func startNewInterval(phase: IntervalPhase) {
-        currentIntervalRecord = IntervalRecord(
-            phase: phase,
-            seriesNumber: currentSeries,
-            startTime: totalElapsedTime
-        )
-    }
-
-    private func finalizeCurrentInterval() {
-        guard var record = currentIntervalRecord else { return }
-
-        record.duration = totalElapsedTime - record.startTime
-        record.hrSamples = hrSamples
-        record.avgHR = hrSamples.isEmpty ? 0 : hrSamples.map(\.bpm).reduce(0, +) / hrSamples.count
-        record.maxHR = hrSamples.map(\.bpm).max() ?? 0
-        record.minHR = hrSamples.map(\.bpm).min() ?? 0
-        record.timeInZone = timeInZone
-        record.avgPace = currentPace
-
-        intervalRecords.append(record)
-        hrSamples = []
-
-        currentIntervalRecord = nil
-    }
-
-    // MARK: - Session Saving
-    private func saveSession(completed: Bool) async {
-        finalizeCurrentInterval()
-
-        guard var session = currentSession else { return }
-
-        session.endDate = Date()
-        session.isCompleted = completed
-        session.intervals = intervalRecords
-        session.totalDistance = totalDistance
-        session.avgHeartRate = avgHeartRate
-        session.maxHeartRate = maxHeartRate
-        session.minHeartRate = minHeartRate == 999 ? 0 : minHeartRate
-        session.timeInZone = timeInZone
-
-        // Calculate score
-        session.score = calculateScore(session)
-
-        do {
-            try await sessionRepository.save(session)
-            self.currentSession = session
-            Log.training.info("Session saved: score \(session.score)")
-        } catch {
-            Log.training.error("Failed to save session: \(error)")
-        }
-    }
-
-    private func calculateScore(_ session: TrainingSession) -> Double {
-        guard session.duration > 0, let plan = plan else { return 0 }
-
-        // Scoring formula from PRD:
-        // Score = (0.4 × TimeInZone%) + (0.3 × PaceScore) + (0.2 × CompletionRate) + (0.1 × DistanceScore)
-
-        let timeInZonePercent = (session.timeInZone / session.duration) * 100
-        let timeInZoneScore = min(timeInZonePercent, 100)
-
-        let completionRate = Double(session.completedIntervals) / Double(plan.seriesCount) * 100
-
-        // Pace score: lower is better, normalize to 0-100
-        let paceScore: Double
-        if let pace = session.avgPace, pace > 0 {
-            // Assume 3:00/km is perfect (180 sec), 8:00/km is poor (480 sec)
-            let normalizedPace = max(0, min(100, (480 - pace) / 3))
-            paceScore = normalizedPace
-        } else {
-            paceScore = 50  // Neutral if no pace data
-        }
-
-        // Distance score based on expected distance for duration
-        let expectedDistance = session.duration * 3.0  // ~3 m/s average running
-        let distanceScore = min(100, (session.totalDistance / expectedDistance) * 100)
-
-        let score = (0.4 * timeInZoneScore) +
-                    (0.3 * paceScore) +
-                    (0.2 * completionRate) +
-                    (0.1 * distanceScore)
-
-        return min(100, max(0, score))
-    }
-
-    // MARK: - Best Session Comparison
-    private func updateBestSessionComparison() {
-        guard let best = bestSession else {
-            isAheadOfBest = true
-            deltaVsBest = 0
-            return
-        }
-
-        // Compare time in zone at this point
-        let currentTimeInZonePercent = totalElapsedTime > 0 ?
-            (timeInZone / totalElapsedTime) * 100 : 0
-
-        let bestTimeInZonePercent = best.timeInZonePercentage
-
-        deltaVsBest = currentTimeInZonePercent - bestTimeInZonePercent
-        isAheadOfBest = deltaVsBest >= 0
-    }
 
     // MARK: - Audio Controls
     func toggleMetronome() {
@@ -662,6 +578,16 @@ final class TrainingViewModel: ObservableObject {
         audioEngine.updateMetronomeBPM(bpm)
     }
 
+    func setMetronomeVolume(_ volume: Float) {
+        metronomeVolume = volume
+        audioEngine.updateMetronomeVolume(volume)
+    }
+
+    func setVoiceVolume(_ volume: Float) {
+        voiceVolume = volume
+        audioEngine.voiceVolume = volume
+    }
+
     // MARK: - Music Controls
     func togglePlayPause() async {
         await musicController.togglePlayPause()
@@ -689,25 +615,78 @@ final class TrainingViewModel: ObservableObject {
         return URL(string: urlString)
     }
 
-    // MARK: - Pace Comparison
-    private func updatePaceComparison(currentPace: Double) {
-        guard currentPace > 0 else {
-            paceVsBest = 0
-            return
-        }
+    // MARK: - Interval Recording
+    func startNewInterval(phase: IntervalPhase) {
+        currentIntervalRecord = IntervalRecord(
+            phase: phase,
+            seriesNumber: currentSeries,
+            startTime: totalElapsedTime
+        )
+    }
 
-        // If we have a best session with pace data, compare
+    func finalizeCurrentInterval() {
+        guard var record = currentIntervalRecord else { return }
+        record.duration = totalElapsedTime - record.startTime
+        record.hrSamples = hrSamples
+        record.avgHR = hrSamples.isEmpty ? 0 : hrSamples.map(\.bpm).reduce(0, +) / hrSamples.count
+        record.maxHR = hrSamples.map(\.bpm).max() ?? 0
+        record.minHR = hrSamples.map(\.bpm).min() ?? 0
+        record.timeInZone = timeInZone
+        record.avgPace = currentPace
+        intervalRecords.append(record)
+        hrSamples = []
+        currentIntervalRecord = nil
+    }
+
+    func saveSession(completed: Bool) async {
+        finalizeCurrentInterval()
+        guard var session = currentSession else { return }
+        session.endDate = Date()
+        session.isCompleted = completed
+        session.intervals = intervalRecords
+        session.totalDistance = totalDistance
+        session.avgHeartRate = avgHeartRate
+        session.maxHeartRate = maxHeartRate
+        session.minHeartRate = minHeartRate == 999 ? 0 : minHeartRate
+        session.timeInZone = timeInZone
+        session.score = calculateScore(session)
+        do {
+            try await sessionRepository.save(session)
+            self.currentSession = session
+            Log.training.info("Session saved: score \(session.score)")
+        } catch {
+            Log.training.error("Failed to save session: \(error)")
+        }
+    }
+
+    private func calculateScore(_ session: TrainingSession) -> Double {
+        guard session.duration > 0, let plan = plan else { return 0 }
+        let timeInZonePercent = (session.timeInZone / session.duration) * 100
+        let timeInZoneScore = min(timeInZonePercent, 100)
+        let completionRate = Double(session.completedIntervals) / Double(plan.seriesCount) * 100
+        let paceScore: Double = session.avgPace.map { max(0, min(100, (480 - $0) / 3)) } ?? 50
+        let expectedDistance = session.duration * 3.0
+        let distanceScore = min(100, (session.totalDistance / expectedDistance) * 100)
+        return min(100, max(0, (0.4 * timeInZoneScore) + (0.3 * paceScore) + (0.2 * completionRate) + (0.1 * distanceScore)))
+    }
+
+    func updateBestSessionComparison() {
+        guard let best = bestSession else { isAheadOfBest = true; deltaVsBest = 0; return }
+        let currentPct = totalElapsedTime > 0 ? (timeInZone / totalElapsedTime) * 100 : 0
+        deltaVsBest = currentPct - best.timeInZonePercentage
+        isAheadOfBest = deltaVsBest >= 0
+    }
+
+    func updatePaceComparison(currentPace: Double) {
+        guard currentPace > 0 else { paceVsBest = 0; return }
         if let best = bestSession, let bestAvgPace = best.avgPace, bestAvgPace > 0 {
             bestPace = bestAvgPace
-            // Negative means current is faster (better)
             paceVsBest = currentPace - bestAvgPace
         } else {
-            // No previous record, current becomes the baseline
             bestPace = 0
             paceVsBest = 0
         }
     }
-
 }
 
 // MARK: - Preview Helpers

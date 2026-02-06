@@ -11,6 +11,7 @@ final class PedometerService: ObservableObject {
     // MARK: - Published State
     @Published private(set) var currentCadence: Int = 0
     @Published private(set) var totalSteps: Int = 0
+    @Published private(set) var sessionSteps: Int = 0  // Steps in current session only
     @Published private(set) var distance: Double = 0  // meters
     @Published private(set) var isRunning: Bool = false
     @Published private(set) var isAvailable: Bool = false
@@ -29,6 +30,11 @@ final class PedometerService: ObservableObject {
     private let paceSubject = PassthroughSubject<Double, Never>()
     var pacePublisher: AnyPublisher<Double, Never> {
         paceSubject.eraseToAnyPublisher()
+    }
+
+    private let stepsSubject = PassthroughSubject<Int, Never>()
+    var stepsPublisher: AnyPublisher<Int, Never> {
+        stepsSubject.eraseToAnyPublisher()
     }
 
     // For pace calculation
@@ -58,6 +64,7 @@ final class PedometerService: ObservableObject {
         startDate = Date()
         isRunning = true
         totalSteps = 0
+        sessionSteps = 0
         distance = 0
         currentCadence = 0
         lastDistance = 0
@@ -94,7 +101,10 @@ final class PedometerService: ObservableObject {
         guard let data = data else { return }
 
         // Update steps
-        totalSteps = data.numberOfSteps.intValue
+        let steps = data.numberOfSteps.intValue
+        totalSteps = steps
+        sessionSteps = steps  // Session steps = steps since session start
+        stepsSubject.send(steps)
 
         // Update distance if available
         if let dist = data.distance {

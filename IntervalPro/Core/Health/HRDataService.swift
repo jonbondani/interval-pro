@@ -20,6 +20,7 @@ final class HRDataService: ObservableObject {
     @Published private(set) var currentSpeed: Double = 0  // km/h
     @Published private(set) var currentCadence: Int = 0   // steps per minute (SPM)
     @Published private(set) var totalDistance: Double = 0  // meters
+    @Published private(set) var sessionSteps: Int = 0     // steps in current session
 
     // MARK: - Zone Tracking (based on CADENCE, not heart rate)
     @Published private(set) var currentZoneStatus: ZoneStatus = .inZone
@@ -135,6 +136,15 @@ final class HRDataService: ObservableObject {
                 guard let self = self else { return }
                 // Always update total distance from pedometer
                 self.totalDistance = distance
+            }
+            .store(in: &cancellables)
+
+        // Subscribe to iPhone pedometer steps (session-specific)
+        pedometerService.stepsPublisher
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] steps in
+                guard let self = self else { return }
+                self.sessionSteps = steps
             }
             .store(in: &cancellables)
 
@@ -375,6 +385,7 @@ final class HRDataService: ObservableObject {
         currentSpeed = 0
         currentCadence = 0
         totalDistance = 0
+        sessionSteps = 0
         timeInZone = 0
         recentHRValues.removeAll()
     }

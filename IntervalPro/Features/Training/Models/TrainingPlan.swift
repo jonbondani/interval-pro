@@ -52,6 +52,11 @@ struct TrainingPlan: Identifiable, Codable, Equatable {
         workBlocks != nil && !(workBlocks?.isEmpty ?? true)
     }
 
+    /// Whether this is a walking workout (no intervals, single continuous session)
+    var isWalkingWorkout: Bool {
+        seriesCount == 1 && restDuration == 0 && warmupDuration == nil && cooldownDuration == nil
+    }
+
     /// Number of blocks per series (1 for simple plans, N for progressive)
     var blocksPerSeries: Int {
         workBlocks?.count ?? 1
