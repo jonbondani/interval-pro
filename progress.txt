@@ -1,0 +1,362 @@
+================================================================================
+                         INTERVALPRO iOS - ESTADO DEL PROYECTO
+================================================================================
+                          Fecha: 6 de Febrero, 2026
+                          Version: 0.9.0 (Pre-release)
+                          Completado: ~70%
+================================================================================
+
+--------------------------------------------------------------------------------
+                              RESUMEN EJECUTIVO
+--------------------------------------------------------------------------------
+
+IntervalPro es una app iOS para entrenamiento por intervalos HIIT con:
+- Integración Garmin Fenix via Bluetooth LE
+- Monitorización de frecuencia cardíaca en tiempo real
+- Metrónomo de cadencia con overlay sobre música
+- Análisis de sesiones y progresión
+
+Estado actual: FUNCIONAL para caso de uso primario (entrenamientos de intervalos)
+Pendiente: UI de creación de planes, exportación, analytics avanzado
+
+================================================================================
+                        FUNCIONALIDADES COMPLETADAS (70%)
+================================================================================
+
+[x] CORE TRAINING ENGINE
+--------------------------------------------------------------------------------
+    [x] IntervalTimer con CADisplayLink (30-60 FPS)
+    [x] Fases: warmup, work, rest, cooldown
+    [x] Planes progresivos (pirámide 160->170->180 SPM)
+    [x] Control de series y bloques
+    [x] Skip de fases (warmup, cooldown, fase actual)
+    [x] Ajuste de tiempo (+/- segundos)
+    [x] Avisos de tiempo (30, 10, 5, 3, 2, 1 segundos)
+
+[x] MONITORIZACIÓN DE FRECUENCIA CARDÍACA
+--------------------------------------------------------------------------------
+    [x] Conexión Garmin Fenix via CoreBluetooth
+        - HR Service (0x180D)
+        - Running Speed & Cadence (0x1814)
+        - Reconexión automática (3 intentos, backoff exponencial)
+    [x] Fallback a HealthKit cuando Garmin no disponible
+    [x] Sensores iPhone (CMPedometer) para cadencia/pasos
+    [x] HRDataService unificado (Garmin > HealthKit > iPhone)
+    [x] Filtrado de outliers HR (ventana de 5 valores)
+    [x] Modo simulación para testing sin hardware
+
+[x] TRACKING DE ZONAS BASADO EN CADENCIA
+--------------------------------------------------------------------------------
+    [x] HeartRateZone con targetBPM como cadencia (SPM)
+    [x] Zonas configurables por plan (no hardcoded)
+    [x] Tolerancia configurable (±5 SPM por defecto)
+    [x] Cálculo de tiempo en zona
+    [x] Estado de coaching (maintain, speed up, slow down)
+
+[x] AUDIO Y METRÓNOMO
+--------------------------------------------------------------------------------
+    [x] MetronomeEngine con AVAudioSession
+        - Mixing con música (mixWithOthers)
+        - Ducking durante anuncios de voz
+    [x] Sonidos: click, beep, woodblock
+    [x] BPM configurable (150-190)
+    [x] Control de volumen independiente (metrónomo vs voz)
+    [x] Anuncios de voz (AVSpeechSynthesizer)
+        - Cambios de fase
+        - Avisos de tiempo
+        - Instrucciones de coaching
+    [x] Español como idioma principal
+
+[x] INTEGRACIÓN MUSICAL
+--------------------------------------------------------------------------------
+    [x] UnifiedMusicController con detección automática
+    [x] Apple Music: control completo (play/pause/skip)
+    [x] Spotify: lectura de estado (título, artista, playing)
+        - Limitación iOS: no control remoto entre apps
+        - Abre Spotify para control manual
+    [x] MiniPlayerView con artwork y controles
+    [x] VolumeControlSheet (long press)
+
+[x] PERSISTENCIA DE SESIONES
+--------------------------------------------------------------------------------
+    [x] CoreData con encriptación (AES-256)
+    [x] TrainingSessionEntity con mapping a dominio
+    [x] IntervalRecord con muestras HR
+    [x] SessionRepository con CRUD async/await
+    [x] Fetch: por ID, recientes, por plan, mejor sesión, rango fechas
+    [x] Guardado de sesiones parciales (detenidas)
+
+[x] MODELOS DE DATOS
+--------------------------------------------------------------------------------
+    [x] TrainingPlan con bloques progresivos (WorkBlock)
+    [x] TrainingSession con scoring (0-100)
+    [x] IntervalRecord con agregados HR
+    [x] HRSample con timestamp y fuente
+    [x] 5 planes predefinidos:
+        - Recomendado (pirámide progresiva)
+        - Principiante
+        - Intermedio
+        - Avanzado
+        - Caminata (50 min continuo)
+
+[x] UI DE ENTRENAMIENTO
+--------------------------------------------------------------------------------
+    [x] TrainingView con layout adaptativo
+    [x] Display de timer con fase y tiempo restante
+    [x] Display de cadencia con barra de zona
+    [x] Display de ritmo (pace) con comparación vs mejor sesión
+    [x] Métricas: pace, distancia, pasos
+    [x] Indicador de progreso de series (dots)
+    [x] Controles: pause, stop, volume, skip
+    [x] Widget de música integrado
+    [x] Gradiente de fondo según fase
+
+[x] UI DE CAMINATA (WALKING WORKOUTS)
+--------------------------------------------------------------------------------
+    [x] WalkingPaceDisplay prominente
+    [x] PaceZoneBar visual
+    [x] WalkingMetricsRow: pace, distancia, pasos
+    [x] Detección automática de tipo de entreno
+    [x] Contador de pasos por sesión (no acumulado)
+
+[x] DASHBOARD DE PROGRESO
+--------------------------------------------------------------------------------
+    [x] Lista de sesiones recientes (últimas 50)
+    [x] SessionRowView con resumen
+    [x] SessionDetailView con:
+        - Círculo de puntuación
+        - Tarjetas de resumen
+        - Gráfico de intervalos
+        - Grid de estadísticas
+    [x] Empty state para usuarios nuevos
+
+[x] ONBOARDING Y CONFIGURACIÓN
+--------------------------------------------------------------------------------
+    [x] Flujo de onboarding (welcome, pairing, skip)
+    [x] GarminPairingView con discovery y selección
+    [x] Estado de conexión visible
+    [x] Reconexión manual
+    [x] Debug controls (reset onboarding)
+
+[x] ARQUITECTURA Y CALIDAD
+--------------------------------------------------------------------------------
+    [x] MVVM con inyección de dependencias
+    [x] Protocolos para abstracción (GarminManaging, etc.)
+    [x] Async/await sin completion handlers
+    [x] @MainActor para thread safety
+    [x] Combine publishers para streams reactivos
+    [x] Logging estructurado (os.Logger)
+    [x] 11 archivos de tests unitarios
+
+[x] COACHING EN TIEMPO REAL
+--------------------------------------------------------------------------------
+    [x] CoachingService con análisis cadencia + pace
+    [x] Estados: maintain, speed up/down cadence/pace
+    [x] Mensajes en español
+    [x] Throttling de anuncios (15 segundos mínimo)
+
+================================================================================
+                         FUNCIONALIDADES PENDIENTES (30%)
+================================================================================
+
+[ ] UI DE CREACIÓN DE PLANES (Prioridad: ALTA)
+--------------------------------------------------------------------------------
+    Descripción: Interfaz para crear/editar planes personalizados
+    PRD: US-101, US-102, US-103
+    Estimación: 2-3 días
+
+    Requerido:
+    [ ] Selector de zona de trabajo (160/170/180 SPM)
+    [ ] Slider de duración (1-10 min)
+    [ ] Selector de zona de descanso
+    [ ] Control de número de series (2-20)
+    [ ] Toggles warmup/cooldown
+    [ ] Tiempo total estimado
+    [ ] Guardar plan con nombre
+
+[ ] EXPORTACIÓN Y COMPARTIR (Prioridad: MEDIA)
+--------------------------------------------------------------------------------
+    Descripción: Exportar sesiones en formatos estándar
+    PRD: US-403
+    Estimación: 3-4 días
+
+    Requerido:
+    [ ] Export GPX
+    [ ] Export TCX
+    [ ] Integración Strava
+    [ ] Share cards para redes sociales
+    [ ] HealthKit workout write
+
+[ ] ANALYTICS AVANZADO (Prioridad: MEDIA)
+--------------------------------------------------------------------------------
+    Descripción: Gráficos de progresión y tendencias
+    PRD: US-402
+    Estimación: 3-4 días
+
+    Requerido:
+    [ ] Gráfico de tendencia de scores (Swift Charts)
+    [ ] Gráfico de tiempo en zona semanal
+    [ ] Records personales (best pace, best score, streak)
+    [ ] Estadísticas semanales/mensuales
+    [ ] TRIMP (Training Impulse)
+
+[ ] SISTEMA PREMIUM/SUSCRIPCIÓN (Prioridad: BAJA - v1.2)
+--------------------------------------------------------------------------------
+    Descripción: Monetización con StoreKit 2
+    Estimación: 2-3 días
+
+    Requerido:
+    [ ] Paywall UI
+    [ ] StoreKit 2 integration
+    [ ] Planes ilimitados (premium)
+    [ ] Features exclusivas
+
+[ ] CLOUD SYNC (Prioridad: BAJA - v1.1+)
+--------------------------------------------------------------------------------
+    Descripción: Sincronización entre dispositivos
+    Estimación: 4-5 días
+
+    Requerido:
+    [ ] CloudKit container
+    [ ] Sync de sesiones
+    [ ] Resolución de conflictos
+    [ ] Modo offline
+
+[ ] APPLE WATCH COMPANION (Prioridad: BAJA - Q4 2026)
+--------------------------------------------------------------------------------
+    Descripción: App watchOS independiente
+    Estimación: 2-3 semanas
+
+    Requerido:
+    [ ] Target watchOS
+    [ ] WatchConnectivity
+    [ ] Workout session en watch
+    [ ] Complicaciones
+
+[ ] FEATURES SOCIALES (Prioridad: BAJA - v1.3+)
+--------------------------------------------------------------------------------
+    Descripción: Compartir y competir con otros
+    Estimación: 2-3 semanas
+
+    Requerido:
+    [ ] Perfiles de usuario
+    [ ] Challenges
+    [ ] Leaderboards
+    [ ] Feed de actividad
+
+================================================================================
+                              BUGS CONOCIDOS
+================================================================================
+
+[RESUELTO] Sesiones no aparecían en progreso
+    - Causa: fetchRecent filtraba isCompleted == YES
+    - Fix: Eliminado filtro, ahora muestra todas las sesiones
+    - Commit: 8afa38a
+
+[PENDIENTE] Testing en dispositivo real necesario
+    - Verificar guardado de sesiones
+    - Verificar conexión Garmin estable
+    - Verificar overlay de audio con Spotify
+
+================================================================================
+                           ARCHIVOS PRINCIPALES
+================================================================================
+
+App/
+├── IntervalProApp.swift          # Entry point
+├── AppState.swift                # Estado global
+├── ContentView.swift             # TabView, Home, Progress, Profile
+└── NavigationRouter.swift        # Routing
+
+Features/Training/
+├── Models/
+│   ├── TrainingPlan.swift        # 329 líneas - Planes y bloques
+│   ├── TrainingSession.swift     # Sesiones e intervalos
+│   ├── HeartRateZone.swift       # 389 líneas - Zonas y coaching
+│   └── IntervalPhase.swift       # Enums de fases
+├── ViewModels/
+│   └── TrainingViewModel.swift   # 733 líneas - Orquestador principal
+└── Views/
+    ├── TrainingView.swift        # UI de entreno activo
+    ├── TrainingViewComponents.swift # Componentes reutilizables
+    ├── WalkingWorkoutViews.swift # UI específica de caminata
+    └── MiniPlayerView.swift      # Widget de música
+
+Core/
+├── Timer/
+│   └── IntervalTimer.swift       # 375 líneas - Motor de intervalos
+├── Health/
+│   ├── HRDataService.swift       # Capa de datos unificada
+│   └── HealthKitManager.swift    # Integración HealthKit
+├── Bluetooth/
+│   └── GarminManager.swift       # Conexión BLE Garmin
+├── Audio/
+│   ├── MetronomeEngine.swift     # Metrónomo y voz
+│   └── UnifiedMusicController.swift # Control musical
+├── Motion/
+│   └── PedometerService.swift    # Cadencia iPhone
+├── Training/
+│   └── CoachingService.swift     # Coaching en tiempo real
+└── Persistence/
+    ├── CoreDataStack.swift       # Inicialización CD
+    ├── SessionRepository.swift   # CRUD sesiones
+    └── Entities/
+        └── TrainingSessionEntity.swift # Entidad CoreData
+
+Tests/UnitTests/
+├── TrainingViewModelTests.swift
+├── IntervalTimerTests.swift
+├── MetronomeEngineTests.swift
+├── GarminManagerTests.swift
+├── HealthKitManagerTests.swift
+├── HRDataServiceTests.swift
+├── SessionRepositoryTests.swift
+├── TrainingPlanTests.swift
+├── HeartRateZoneTests.swift
+├── MusicControllerTests.swift
+└── MiniPlayerViewTests.swift
+
+================================================================================
+                            LÍNEAS DE CÓDIGO
+================================================================================
+
+Código fuente:     ~8,000 líneas (38 archivos Swift)
+Tests:             ~2,000 líneas (11 archivos)
+Total:             ~10,000 líneas
+
+Archivos más grandes:
+- TrainingViewModel.swift:    733 líneas
+- HeartRateZone.swift:        389 líneas
+- IntervalTimer.swift:        375 líneas
+- TrainingPlan.swift:         329 líneas
+
+================================================================================
+                         PRÓXIMOS PASOS RECOMENDADOS
+================================================================================
+
+1. INMEDIATO (Esta semana)
+   - [ ] Testing en dispositivo real (iPhone + Garmin)
+   - [ ] Verificar persistencia de sesiones
+   - [ ] Fix de bugs encontrados en testing
+
+2. CORTO PLAZO (Próximas 2 semanas)
+   - [ ] UI de creación de planes personalizados
+   - [ ] Mejoras de UX basadas en testing
+   - [ ] Preparación para TestFlight beta
+
+3. MEDIO PLAZO (Antes de lanzamiento)
+   - [ ] Exportación GPX/TCX
+   - [ ] Analytics avanzado con Swift Charts
+   - [ ] Polish de UI y animaciones
+   - [ ] Localización completa (es/en)
+
+================================================================================
+                              CONTACTO
+================================================================================
+
+Desarrollador: Daniel López
+Repositorio: github.com/intervalpro/interval-app-ios
+Rama principal: main
+Último commit: 8afa38a (6 Feb 2026)
+
+================================================================================

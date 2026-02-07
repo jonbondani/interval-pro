@@ -281,34 +281,46 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ## Roadmap
 
-### v1.0 - MVP (Q1 2026)
+### v1.0 - MVP (Q1 2026) - 70% Complete
+
+#### Core Features (DONE)
 - [x] Estructura del proyecto
-- [x] Core Data con encriptación
-- [x] HealthKit integration
-- [x] Garmin BLE connection
+- [x] Core Data con encriptación (AES-256)
+- [x] Garmin BLE connection (HR + RSC services)
 - [x] HR Data Service unificado
-- [ ] Interval Timer engine
-- [ ] Metronome audio
-- [ ] Training UI
-- [ ] Session summary
-- [ ] App Store submission
+- [x] Interval Timer engine (CADisplayLink, fases)
+- [x] Metronome audio con mixing
+- [x] Voice announcements (español)
+- [x] Training UI completa
+- [x] Walking workouts UI
+- [x] Progress dashboard con session detail
+- [x] Coaching service en tiempo real
+- [x] Music integration (Spotify read, Apple Music control)
+- [x] iPhone pedometer fallback
+
+#### Pending for v1.0
+- [ ] Plan creation UI (custom plans)
+- [ ] Testing en dispositivo real
+- [ ] App Store submission (requiere cuenta $99)
 
 ### v1.1 - Enhanced (Q2 2026)
-- [ ] Spotify integration
-- [ ] Apple Music integration
-- [ ] Export to Strava
+- [ ] Export GPX/TCX
+- [ ] Strava integration
 - [ ] Share cards
-- [ ] Voice coaching avanzado
+- [ ] Advanced analytics (Swift Charts)
+- [ ] Personal records
 
-### v1.2 - Social (Q3 2026)
-- [ ] Challenges
-- [ ] Leaderboards
-- [ ] Training plans compartidos
+### v1.2 - Premium (Q3 2026)
+- [ ] StoreKit 2 subscriptions
+- [ ] Unlimited custom plans
+- [ ] Cloud sync (CloudKit)
+- [ ] Challenges/Leaderboards
 
 ### v2.0 - Platform (Q4 2026)
 - [ ] Apple Watch companion app
 - [ ] Coach/trainer features
 - [ ] AI-powered recommendations
+- [ ] Intelligent playlists by cadence
 
 ---
 

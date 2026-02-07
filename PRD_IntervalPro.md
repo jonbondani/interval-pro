@@ -1058,6 +1058,7 @@ B   ─────┼────────┼────────┼─�
 | 1.0 | 2026-01-27 | Versión inicial del PRD |
 | 1.1 | 2026-01-29 | Añadido plan "Recomendado" con pirámide progresiva 160→170→180 BPM |
 | 1.2 | 2026-01-30 | Actualizada integración música: Spotify como servicio por defecto, control via URL schemes + MPNowPlayingInfoCenter |
+| 1.3 | 2026-02-06 | Añadido Apéndice E: Estado de Implementación Actual |
 
 ### Apéndice D: Notas Técnicas de Integración Musical
 
@@ -1101,6 +1102,77 @@ Se muestra en TrainingView durante el entrenamiento:
 - Delta de ritmo (pace) vs mejor sesión comparable
 - Indicador visual (+/- segundos por km)
 - Color verde si va mejor, rojo si va peor
+
+### Apéndice E: Estado de Implementación Actual (Feb 2026)
+
+#### Resumen de Progreso
+
+| Área | Completado | Estado |
+|------|------------|--------|
+| Core Training Engine | 100% | ✅ |
+| HR Monitoring (Garmin/iPhone) | 100% | ✅ |
+| Audio/Metronome | 100% | ✅ |
+| Music Integration | 100% | ✅ |
+| Session Persistence | 100% | ✅ |
+| Training UI | 100% | ✅ |
+| Walking Workouts | 100% | ✅ |
+| Progress Dashboard | 100% | ✅ |
+| Coaching Service | 100% | ✅ |
+| Plan Creation UI | 0% | ⏳ |
+| Export (GPX/Strava) | 0% | ⏳ |
+| Advanced Analytics | 0% | ⏳ |
+| **TOTAL** | **~70%** | 🔄 |
+
+#### User Stories Implementadas
+
+| Epic | User Story | Estado |
+|------|------------|--------|
+| **Epic 1: Planes** | US-101 Configurar zonas BPM | ✅ (código, no UI) |
+| | US-102 Definir series | ✅ (código, no UI) |
+| | US-103 Guardar planes | ✅ (predefinidos) |
+| | US-104 Planes predefinidos | ✅ COMPLETO |
+| **Epic 2: Garmin** | US-201 Conectar Fenix | ✅ COMPLETO |
+| | US-202 FC en tiempo real | ✅ COMPLETO |
+| | US-203 Velocidad y ritmo | ✅ COMPLETO |
+| | US-204 AutoLap automático | ✅ COMPLETO |
+| **Epic 3: Audio** | US-301 Metrónomo overlay | ✅ COMPLETO |
+| | US-302 Alertas de voz | ✅ COMPLETO |
+| | US-303 Control de música | ✅ COMPLETO |
+| **Epic 4: Análisis** | US-401 Mejor sesión | ✅ COMPLETO |
+| | US-402 Historial | ✅ COMPLETO |
+| | US-403 Export/Compartir | ⏳ PENDIENTE |
+| **Epic 5: Tracking** | US-501 Pantalla entrenamiento | ✅ COMPLETO |
+| | US-502 Pausar/Reanudar | ✅ COMPLETO |
+
+#### Archivos Principales y Líneas de Código
+
+| Archivo | Líneas | Propósito |
+|---------|--------|-----------|
+| TrainingViewModel.swift | 733 | Orquestador principal |
+| HeartRateZone.swift | 389 | Zonas y coaching |
+| IntervalTimer.swift | 375 | Motor de intervalos |
+| TrainingPlan.swift | 329 | Planes y bloques |
+| GarminManager.swift | ~300 | Conexión BLE |
+| HRDataService.swift | ~200 | Datos unificados |
+| **Total código** | ~8,000 | 38 archivos Swift |
+| **Total tests** | ~2,000 | 11 archivos |
+
+#### Notas de Implementación
+
+**Decisiones técnicas clave:**
+1. Zonas basadas en **cadencia (SPM)**, no FC real
+2. CoreBluetooth estándar (no Garmin SDK)
+3. Spotify read-only (limitación iOS)
+4. CoreData con encriptación AES-256
+5. Async/await sin completion handlers
+
+**Lo que falta para MVP:**
+1. UI de creación de planes personalizados
+2. Testing exhaustivo en dispositivo real
+3. Cuenta Apple Developer de pago ($99)
+
+**Bugs conocidos resueltos:**
+- Sesiones no aparecían en progreso (commit 8afa38a)
 
 ---
 
