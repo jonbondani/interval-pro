@@ -443,6 +443,21 @@ final class TrainingViewModel: ObservableObject {
         Log.training.info("Workout stopped")
     }
 
+    func discardWorkout() async {
+        intervalTimer.stop()
+        audioEngine.stopMetronome()
+        audioEngine.stopVoice()
+        hrDataService.stop()
+        hrDataService.disableSimulation()
+        coachingService.setWorkoutRunning(false)
+
+        _ = try? await healthKitManager.endWorkout()
+
+        // Don't save - just discard
+        currentSession = nil
+        Log.training.info("Workout discarded (not saved)")
+    }
+
     // MARK: - Event Handlers
     private func handlePhaseChange(from oldPhase: IntervalPhase, to newPhase: IntervalPhase) async {
         // Finalize previous interval record
@@ -603,25 +618,16 @@ final class TrainingViewModel: ObservableObject {
 
     /// Returns the URL for the active music service app
     var musicAppURL: URL? {
-        let urlString: String
         switch musicController.activeService {
-        case .appleMusic:
-            urlString = "music://"
-        case .spotify:
-            urlString = "spotify://"
-        case .none:
-            urlString = "music://"  // Default to Apple Music
+        case .appleMusic: return URL(string: "music://")
+        case .spotify: return URL(string: "spotify://")
+        case .none: return URL(string: "music://")
         }
-        return URL(string: urlString)
     }
 
     // MARK: - Interval Recording
     func startNewInterval(phase: IntervalPhase) {
-        currentIntervalRecord = IntervalRecord(
-            phase: phase,
-            seriesNumber: currentSeries,
-            startTime: totalElapsedTime
-        )
+        currentIntervalRecord = IntervalRecord(phase: phase, seriesNumber: currentSeries, startTime: totalElapsedTime)
     }
 
     func finalizeCurrentInterval() {
@@ -640,10 +646,7 @@ final class TrainingViewModel: ObservableObject {
 
     func saveSession(completed: Bool) async {
         finalizeCurrentInterval()
-        guard var session = currentSession, totalElapsedTime >= 5 else {
-            Log.training.info("No session to save or too short")
-            return
-        }
+        guard var session = currentSession, totalElapsedTime >= 5 else { return }
         session.endDate = Date()
         session.isCompleted = completed
         session.intervals = intervalRecords
@@ -658,21 +661,17 @@ final class TrainingViewModel: ObservableObject {
         do {
             try await sessionRepository.save(session)
             self.currentSession = session
-            Log.training.info("Session saved: \(session.planName), score=\(session.score), steps=\(session.totalSteps)")
-        } catch {
-            Log.training.error("Failed to save session: \(error)")
-        }
+            Log.training.info("Session saved: \(session.planName), score=\(session.score)")
+        } catch { Log.training.error("Failed to save session: \(error)") }
     }
 
     private func calculateScore(_ session: TrainingSession) -> Double {
         guard session.duration > 0, let plan = plan else { return 0 }
-        let timeInZonePercent = (session.timeInZone / session.duration) * 100
-        let timeInZoneScore = min(timeInZonePercent, 100)
-        let completionRate = Double(session.completedIntervals) / Double(plan.seriesCount) * 100
-        let paceScore: Double = session.avgPace.map { max(0, min(100, (480 - $0) / 3)) } ?? 50
-        let expectedDistance = session.duration * 3.0
-        let distanceScore = min(100, (session.totalDistance / expectedDistance) * 100)
-        return min(100, max(0, (0.4 * timeInZoneScore) + (0.3 * paceScore) + (0.2 * completionRate) + (0.1 * distanceScore)))
+        let tizPct = (session.timeInZone / session.duration) * 100
+        let compRate = Double(session.completedIntervals) / Double(plan.seriesCount) * 100
+        let paceScore = session.avgPace.map { max(0, min(100, (480 - $0) / 3)) } ?? 50
+        let distScore = min(100, (session.totalDistance / (session.duration * 3.0)) * 100)
+        return min(100, max(0, 0.4 * min(tizPct, 100) + 0.3 * paceScore + 0.2 * compRate + 0.1 * distScore))
     }
 
     func updateBestSessionComparison() {
@@ -682,53 +681,25 @@ final class TrainingViewModel: ObservableObject {
         isAheadOfBest = deltaVsBest >= 0
     }
 
-    func updatePaceComparison(currentPace: Double) {
-        guard currentPace > 0 else { paceVsBest = 0; return }
-        if let best = bestSession, let p = best.avgPace, p > 0 { bestPace = p; paceVsBest = currentPace - p }
+    func updatePaceComparison(currentPace pace: Double) {
+        guard pace > 0 else { paceVsBest = 0; return }
+        if let best = bestSession, let bp = best.avgPace, bp > 0 { bestPace = bp; paceVsBest = pace - bp }
         else { bestPace = 0; paceVsBest = 0 }
     }
 }
 
 // MARK: - Preview Helpers
 extension TrainingViewModel {
-    static func preview(
-        phase: IntervalPhase = .work,
-        hr: Int = 145,          // Heart rate (FC)
-        cadence: Int = 170,     // Cadence (SPM)
-        series: Int = 2,
-        totalSeries: Int = 4,
-        pace: Double = 330,     // 5:30/km
-        bestPace: Double = 320  // 5:20/km
-    ) -> TrainingViewModel {
-        let vm = TrainingViewModel(
-            garminManager: MockGarminManager(),
-            healthKitManager: MockHealthKitManager(),
-            sessionRepository: MockSessionRepository(),
-            musicController: .shared
-        )
-
-        vm.currentPhase = phase
-        vm.currentHeartRate = hr
-        vm.currentCadence = cadence
-        vm.currentSeries = series
-        vm.totalSeries = totalSeries
-        vm.phaseRemainingTime = 90
-        vm.phaseProgress = 0.5
-        vm.zoneStatus = .inZone
-        vm.currentPace = pace
-        vm.bestPace = bestPace
-        vm.paceVsBest = pace - bestPace
-
-        // Preview music state
-        vm.nowPlayingTrack = MusicTrack(
-            id: "preview",
-            title: "Running Motivation",
-            artist: "Workout Mix",
-            duration: 210
-        )
-        vm.musicPlaybackState = .playing
-        vm.isMusicConnected = true
-
+    static func preview(phase: IntervalPhase = .work, hr: Int = 145, cadence: Int = 170,
+                        series: Int = 2, totalSeries: Int = 4, pace: Double = 330, bestPace: Double = 320) -> TrainingViewModel {
+        let vm = TrainingViewModel(garminManager: MockGarminManager(), healthKitManager: MockHealthKitManager(),
+                                   sessionRepository: MockSessionRepository(), musicController: .shared)
+        vm.currentPhase = phase; vm.currentHeartRate = hr; vm.currentCadence = cadence
+        vm.currentSeries = series; vm.totalSeries = totalSeries; vm.phaseRemainingTime = 90
+        vm.phaseProgress = 0.5; vm.zoneStatus = .inZone; vm.currentPace = pace
+        vm.bestPace = bestPace; vm.paceVsBest = pace - bestPace
+        vm.nowPlayingTrack = MusicTrack(id: "preview", title: "Running Motivation", artist: "Workout Mix", duration: 210)
+        vm.musicPlaybackState = .playing; vm.isMusicConnected = true
         return vm
     }
 }

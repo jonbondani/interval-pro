@@ -516,27 +516,48 @@ struct SessionDetailView: View {
     }
 
     private var summaryCards: some View {
-        HStack(spacing: DesignTokens.Spacing.md) {
-            SummaryCard(
-                title: "Duración",
-                value: session.durationFormatted,
-                icon: "clock.fill",
-                color: .blue
-            )
+        VStack(spacing: DesignTokens.Spacing.md) {
+            HStack(spacing: DesignTokens.Spacing.md) {
+                SummaryCard(
+                    title: "Duración",
+                    value: session.durationFormatted,
+                    icon: "clock.fill",
+                    color: .blue
+                )
 
-            SummaryCard(
-                title: "Distancia",
-                value: session.distanceFormatted,
-                icon: "location.fill",
-                color: .green
-            )
+                SummaryCard(
+                    title: "Distancia",
+                    value: session.distanceFormatted,
+                    icon: "location.fill",
+                    color: .green
+                )
 
-            SummaryCard(
-                title: "Ritmo",
-                value: session.avgPaceFormatted,
-                icon: "speedometer",
-                color: .orange
-            )
+                SummaryCard(
+                    title: "Ritmo",
+                    value: session.avgPaceFormatted,
+                    icon: "speedometer",
+                    color: .orange
+                )
+            }
+
+            // Walking workout specific: steps and average speed
+            if session.isWalkingWorkout {
+                HStack(spacing: DesignTokens.Spacing.md) {
+                    SummaryCard(
+                        title: "Pasos",
+                        value: session.stepsFormatted,
+                        icon: "shoeprints.fill",
+                        color: .purple
+                    )
+
+                    SummaryCard(
+                        title: "Velocidad Media",
+                        value: session.avgSpeedFormatted,
+                        icon: "gauge.with.dots.needle.bottom.50percent",
+                        color: .cyan
+                    )
+                }
+            }
         }
     }
 

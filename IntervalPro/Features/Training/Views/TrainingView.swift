@@ -7,7 +7,8 @@ struct TrainingView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
 
-    @State private var showVolumeControl = false
+    @State private var showMetronomeControl = false
+    @State private var showVoiceControl = false
     @State private var showStopConfirmation = false
 
     let plan: TrainingPlan
@@ -66,27 +67,38 @@ struct TrainingView: View {
         .task {
             await viewModel.configure(with: plan)
         }
-        .sheet(isPresented: $showVolumeControl) {
-            VolumeControlSheet(
-                metronomeVolume: $viewModel.metronomeVolume,
-                voiceVolume: $viewModel.voiceVolume,
+        .sheet(isPresented: $showMetronomeControl) {
+            MetronomeControlSheet(
                 metronomeBPM: $viewModel.metronomeBPM,
-                onMetronomeVolumeChange: { viewModel.setMetronomeVolume($0) },
-                onVoiceVolumeChange: { viewModel.setVoiceVolume($0) },
-                onBPMChange: { viewModel.setMetronomeBPM($0) }
+                metronomeVolume: $viewModel.metronomeVolume,
+                onBPMChange: { viewModel.setMetronomeBPM($0) },
+                onVolumeChange: { viewModel.setMetronomeVolume($0) }
             )
-            .presentationDetents([.height(380)])
+            .presentationDetents([.height(320)])
         }
-        .alert("Finalizar Entrenamiento", isPresented: $showStopConfirmation) {
-            Button("Guardar y Salir", role: .destructive) {
+        .sheet(isPresented: $showVoiceControl) {
+            VoiceControlSheet(
+                voiceVolume: $viewModel.voiceVolume,
+                onVolumeChange: { viewModel.setVoiceVolume($0) }
+            )
+            .presentationDetents([.height(220)])
+        }
+        .confirmationDialog("Finalizar Entrenamiento", isPresented: $showStopConfirmation, titleVisibility: .visible) {
+            Button("Guardar y Salir") {
                 Task {
                     await viewModel.stopWorkout()
                     dismiss()
                 }
             }
+            Button("Salir sin Guardar", role: .destructive) {
+                Task {
+                    await viewModel.discardWorkout()
+                    dismiss()
+                }
+            }
             Button("Cancelar", role: .cancel) { }
         } message: {
-            Text("¿Deseas guardar este entrenamiento antes de salir?")
+            Text("¿Qué deseas hacer con este entrenamiento?")
         }
     }
 
@@ -144,7 +156,7 @@ struct TrainingView: View {
 
             Spacer()
 
-            // Audio controls with long press for volume
+            // Audio controls with long press for settings
             HStack(spacing: DesignTokens.Spacing.md) {
                 // Voice toggle (tap) / Volume control (long press)
                 Image(systemName: viewModel.isVoiceEnabled ? "speaker.wave.2.fill" : "speaker.slash.fill")
@@ -155,10 +167,10 @@ struct TrainingView: View {
                         viewModel.toggleVoice()
                     }
                     .onLongPressGesture {
-                        showVolumeControl = true
+                        showVoiceControl = true
                     }
 
-                // Metronome toggle (tap) / Volume control (long press)
+                // Metronome toggle (tap) / BPM+Volume control (long press)
                 Image(systemName: viewModel.isMetronomeEnabled ? "metronome.fill" : "metronome")
                     .font(.title2)
                     .foregroundStyle(viewModel.isMetronomeEnabled ? .blue : .secondary)
@@ -167,7 +179,7 @@ struct TrainingView: View {
                         viewModel.toggleMetronome()
                     }
                     .onLongPressGesture {
-                        showVolumeControl = true
+                        showMetronomeControl = true
                     }
             }
         }

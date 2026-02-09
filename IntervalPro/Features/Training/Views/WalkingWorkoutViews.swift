@@ -145,131 +145,162 @@ struct PaceZoneBar: View {
     }
 }
 
-// MARK: - Volume Control Sheet
-struct VolumeControlSheet: View {
-    @Binding var metronomeVolume: Float
-    @Binding var voiceVolume: Float
+// MARK: - Metronome Control Sheet (Long press on metronome button)
+struct MetronomeControlSheet: View {
     @Binding var metronomeBPM: Int
-    let onMetronomeVolumeChange: (Float) -> Void
-    let onVoiceVolumeChange: (Float) -> Void
+    @Binding var metronomeVolume: Float
     let onBPMChange: (Int) -> Void
+    let onVolumeChange: (Float) -> Void
 
     var body: some View {
-        VStack(spacing: DesignTokens.Spacing.md) {
-            Text("Ajustes de Audio")
-                .font(.headline)
-                .padding(.top)
+        VStack(spacing: DesignTokens.Spacing.lg) {
+            // Header
+            HStack {
+                Image(systemName: "metronome.fill")
+                    .font(.title2)
+                    .foregroundStyle(.blue)
+                Text("Metrónomo")
+                    .font(.headline)
+            }
+            .padding(.top)
 
-            // Metronome BPM
-            VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
-                Label("Cadencia Metrónomo", systemImage: "metronome.fill")
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(.orange)
+            // BPM Control
+            VStack(spacing: DesignTokens.Spacing.sm) {
+                Text("Tempo")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
 
-                HStack {
+                HStack(spacing: DesignTokens.Spacing.lg) {
+                    // -5 button
                     Button {
                         let newBPM = max(100, metronomeBPM - 5)
                         metronomeBPM = newBPM
                         onBPMChange(newBPM)
                     } label: {
                         Image(systemName: "minus.circle.fill")
-                            .font(.title2)
-                            .foregroundStyle(.orange)
+                            .font(.system(size: 44))
+                            .foregroundStyle(.blue)
                     }
 
-                    Spacer()
+                    // BPM display
+                    VStack(spacing: 0) {
+                        Text("\(metronomeBPM)")
+                            .font(.system(size: 56, weight: .bold, design: .rounded))
+                            .contentTransition(.numericText())
+                        Text("BPM")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    .frame(minWidth: 100)
 
-                    Text("\(metronomeBPM)")
-                        .font(.system(size: 36, weight: .bold, design: .rounded))
-
-                    Text("BPM")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-
-                    Spacer()
-
+                    // +5 button
                     Button {
                         let newBPM = min(220, metronomeBPM + 5)
                         metronomeBPM = newBPM
                         onBPMChange(newBPM)
                     } label: {
                         Image(systemName: "plus.circle.fill")
-                            .font(.title2)
-                            .foregroundStyle(.orange)
+                            .font(.system(size: 44))
+                            .foregroundStyle(.blue)
                     }
                 }
-                .padding(.horizontal)
             }
-            .padding(.horizontal)
 
             Divider()
+                .padding(.horizontal)
 
-            // Metronome Volume
-            VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
-                Label("Volumen Metrónomo", systemImage: "speaker.wave.2.fill")
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(.blue)
+            // Volume Control
+            VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
+                Text("Volumen")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .center)
 
                 HStack {
                     Image(systemName: "speaker.fill")
                         .foregroundStyle(.secondary)
-                        .frame(width: 20)
 
                     Slider(value: $metronomeVolume, in: 0...1) { editing in
                         if !editing {
-                            onMetronomeVolumeChange(metronomeVolume)
+                            onVolumeChange(metronomeVolume)
                         }
                     }
                     .tint(.blue)
 
                     Image(systemName: "speaker.wave.3.fill")
                         .foregroundStyle(.secondary)
-                        .frame(width: 20)
-
-                    Text("\(Int(metronomeVolume * 100))%")
-                        .font(.caption.monospacedDigit())
-                        .foregroundStyle(.secondary)
-                        .frame(width: 40)
                 }
+                .padding(.horizontal)
+
+                Text("\(Int(metronomeVolume * 100))%")
+                    .font(.caption.monospacedDigit().weight(.medium))
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .center)
             }
             .padding(.horizontal)
 
-            // Voice Volume
-            VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
-                Label("Volumen Voz", systemImage: "person.wave.2.fill")
-                    .font(.subheadline.weight(.medium))
+            // Note
+            Text("No afecta al volumen de la música")
+                .font(.caption2)
+                .foregroundStyle(.tertiary)
+                .padding(.top, DesignTokens.Spacing.xs)
+
+            Spacer()
+        }
+    }
+}
+
+// MARK: - Voice Control Sheet (Long press on voice button)
+struct VoiceControlSheet: View {
+    @Binding var voiceVolume: Float
+    let onVolumeChange: (Float) -> Void
+
+    var body: some View {
+        VStack(spacing: DesignTokens.Spacing.lg) {
+            // Header
+            HStack {
+                Image(systemName: "speaker.wave.2.fill")
+                    .font(.title2)
                     .foregroundStyle(.green)
+                Text("Notificaciones de Voz")
+                    .font(.headline)
+            }
+            .padding(.top)
+
+            // Volume Control
+            VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
+                Text("Volumen")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .center)
 
                 HStack {
                     Image(systemName: "speaker.fill")
                         .foregroundStyle(.secondary)
-                        .frame(width: 20)
 
                     Slider(value: $voiceVolume, in: 0...1) { editing in
                         if !editing {
-                            onVoiceVolumeChange(voiceVolume)
+                            onVolumeChange(voiceVolume)
                         }
                     }
                     .tint(.green)
 
                     Image(systemName: "speaker.wave.3.fill")
                         .foregroundStyle(.secondary)
-                        .frame(width: 20)
-
-                    Text("\(Int(voiceVolume * 100))%")
-                        .font(.caption.monospacedDigit())
-                        .foregroundStyle(.secondary)
-                        .frame(width: 40)
                 }
+                .padding(.horizontal)
+
+                Text("\(Int(voiceVolume * 100))%")
+                    .font(.caption.monospacedDigit().weight(.medium))
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .center)
             }
             .padding(.horizontal)
 
-            // Note about music
-            Text("Estos controles solo afectan al metrónomo y las notificaciones de voz, no a la música.")
+            // Note
+            Text("No afecta al volumen de la música")
                 .font(.caption2)
                 .foregroundStyle(.tertiary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal)
                 .padding(.top, DesignTokens.Spacing.xs)
 
             Spacer()

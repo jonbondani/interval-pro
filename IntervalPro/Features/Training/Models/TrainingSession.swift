@@ -57,6 +57,19 @@ struct TrainingSession: Identifiable, Codable, Equatable {
         return String(format: "%d:%02d /km", minutes, seconds)
     }
 
+    var avgSpeed: Double? {
+        guard totalDistance > 0 else { return nil }
+        // km/h
+        let hours = duration / 3600
+        guard hours > 0 else { return nil }
+        return (totalDistance / 1000) / hours
+    }
+
+    var avgSpeedFormatted: String {
+        guard let speed = avgSpeed else { return "--" }
+        return String(format: "%.1f km/h", speed)
+    }
+
     var timeInZonePercentage: Double {
         guard duration > 0 else { return 0 }
         return (timeInZone / duration) * 100
