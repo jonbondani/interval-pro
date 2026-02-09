@@ -22,6 +22,7 @@
         <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
         <attribute name="intervalsData" optional="YES" attributeType="Binary"/>
         <attribute name="isCompleted" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
+        <attribute name="isWalkingWorkout" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
         <attribute name="maxHeartRate" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
         <attribute name="minHeartRate" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
         <attribute name="planId" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
@@ -30,6 +31,7 @@
         <attribute name="startDate" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
         <attribute name="timeInZone" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
         <attribute name="totalDistance" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="totalSteps" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
         <relationship name="plan" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="TrainingPlanEntity" inverseName="sessions" inverseEntity="TrainingPlanEntity"/>
     </entity>
 </model>

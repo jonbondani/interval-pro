@@ -15,6 +15,8 @@ struct TrainingSession: Identifiable, Codable, Equatable {
     var minHeartRate: Int
     var timeInZone: TimeInterval  // seconds
     var score: Double  // 0-100
+    var totalSteps: Int  // steps in this session
+    var isWalkingWorkout: Bool  // true if this was a walking workout
 
     // MARK: - Computed Properties
     var duration: TimeInterval {
@@ -64,6 +66,12 @@ struct TrainingSession: Identifiable, Codable, Equatable {
         intervals.filter { $0.phase == .work }.count
     }
 
+    var stepsFormatted: String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        return formatter.string(from: NSNumber(value: totalSteps)) ?? "\(totalSteps)"
+    }
+
     // MARK: - Init
     init(
         id: UUID = UUID(),
@@ -78,7 +86,9 @@ struct TrainingSession: Identifiable, Codable, Equatable {
         maxHeartRate: Int = 0,
         minHeartRate: Int = 0,
         timeInZone: TimeInterval = 0,
-        score: Double = 0
+        score: Double = 0,
+        totalSteps: Int = 0,
+        isWalkingWorkout: Bool = false
     ) {
         self.id = id
         self.planId = planId
@@ -93,6 +103,8 @@ struct TrainingSession: Identifiable, Codable, Equatable {
         self.minHeartRate = minHeartRate
         self.timeInZone = timeInZone
         self.score = score
+        self.totalSteps = totalSteps
+        self.isWalkingWorkout = isWalkingWorkout
     }
 }
 

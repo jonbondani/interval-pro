@@ -16,6 +16,8 @@ public class TrainingSessionEntity: NSManagedObject {
     @NSManaged public var minHeartRate: Int16
     @NSManaged public var timeInZone: Double
     @NSManaged public var score: Double
+    @NSManaged public var totalSteps: Int32
+    @NSManaged public var isWalkingWorkout: Bool
     @NSManaged public var intervalsData: Data?  // Encoded [IntervalRecord]
     @NSManaged public var plan: TrainingPlanEntity?
 }
@@ -52,7 +54,9 @@ extension TrainingSessionEntity {
             maxHeartRate: Int(maxHeartRate),
             minHeartRate: Int(minHeartRate),
             timeInZone: timeInZone,
-            score: score
+            score: score,
+            totalSteps: Int(totalSteps),
+            isWalkingWorkout: isWalkingWorkout
         )
     }
 
@@ -69,6 +73,8 @@ extension TrainingSessionEntity {
         self.minHeartRate = Int16(session.minHeartRate)
         self.timeInZone = session.timeInZone
         self.score = session.score
+        self.totalSteps = Int32(session.totalSteps)
+        self.isWalkingWorkout = session.isWalkingWorkout
 
         // Encode intervals
         do {

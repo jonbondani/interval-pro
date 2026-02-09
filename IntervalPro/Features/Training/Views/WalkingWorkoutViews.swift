@@ -149,24 +149,71 @@ struct PaceZoneBar: View {
 struct VolumeControlSheet: View {
     @Binding var metronomeVolume: Float
     @Binding var voiceVolume: Float
+    @Binding var metronomeBPM: Int
     let onMetronomeVolumeChange: (Float) -> Void
     let onVoiceVolumeChange: (Float) -> Void
+    let onBPMChange: (Int) -> Void
 
     var body: some View {
-        VStack(spacing: DesignTokens.Spacing.lg) {
-            Text("Control de Volumen")
+        VStack(spacing: DesignTokens.Spacing.md) {
+            Text("Ajustes de Audio")
                 .font(.headline)
                 .padding(.top)
 
+            // Metronome BPM
+            VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
+                Label("Cadencia Metrónomo", systemImage: "metronome.fill")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(.orange)
+
+                HStack {
+                    Button {
+                        let newBPM = max(100, metronomeBPM - 5)
+                        metronomeBPM = newBPM
+                        onBPMChange(newBPM)
+                    } label: {
+                        Image(systemName: "minus.circle.fill")
+                            .font(.title2)
+                            .foregroundStyle(.orange)
+                    }
+
+                    Spacer()
+
+                    Text("\(metronomeBPM)")
+                        .font(.system(size: 36, weight: .bold, design: .rounded))
+
+                    Text("BPM")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    Spacer()
+
+                    Button {
+                        let newBPM = min(220, metronomeBPM + 5)
+                        metronomeBPM = newBPM
+                        onBPMChange(newBPM)
+                    } label: {
+                        Image(systemName: "plus.circle.fill")
+                            .font(.title2)
+                            .foregroundStyle(.orange)
+                    }
+                }
+                .padding(.horizontal)
+            }
+            .padding(.horizontal)
+
+            Divider()
+
             // Metronome Volume
-            VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
-                Label("Metrónomo", systemImage: "metronome.fill")
+            VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
+                Label("Volumen Metrónomo", systemImage: "speaker.wave.2.fill")
                     .font(.subheadline.weight(.medium))
                     .foregroundStyle(.blue)
 
                 HStack {
                     Image(systemName: "speaker.fill")
                         .foregroundStyle(.secondary)
+                        .frame(width: 20)
 
                     Slider(value: $metronomeVolume, in: 0...1) { editing in
                         if !editing {
@@ -177,26 +224,26 @@ struct VolumeControlSheet: View {
 
                     Image(systemName: "speaker.wave.3.fill")
                         .foregroundStyle(.secondary)
-                }
+                        .frame(width: 20)
 
-                Text("\(Int(metronomeVolume * 100))%")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .center)
+                    Text("\(Int(metronomeVolume * 100))%")
+                        .font(.caption.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                        .frame(width: 40)
+                }
             }
             .padding(.horizontal)
 
-            Divider()
-
             // Voice Volume
-            VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
-                Label("Notificaciones de Voz", systemImage: "speaker.wave.2.fill")
+            VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
+                Label("Volumen Voz", systemImage: "person.wave.2.fill")
                     .font(.subheadline.weight(.medium))
                     .foregroundStyle(.green)
 
                 HStack {
                     Image(systemName: "speaker.fill")
                         .foregroundStyle(.secondary)
+                        .frame(width: 20)
 
                     Slider(value: $voiceVolume, in: 0...1) { editing in
                         if !editing {
@@ -207,14 +254,23 @@ struct VolumeControlSheet: View {
 
                     Image(systemName: "speaker.wave.3.fill")
                         .foregroundStyle(.secondary)
-                }
+                        .frame(width: 20)
 
-                Text("\(Int(voiceVolume * 100))%")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .center)
+                    Text("\(Int(voiceVolume * 100))%")
+                        .font(.caption.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                        .frame(width: 40)
+                }
             }
             .padding(.horizontal)
+
+            // Note about music
+            Text("Estos controles solo afectan al metrónomo y las notificaciones de voz, no a la música.")
+                .font(.caption2)
+                .foregroundStyle(.tertiary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal)
+                .padding(.top, DesignTokens.Spacing.xs)
 
             Spacer()
         }

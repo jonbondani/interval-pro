@@ -70,10 +70,12 @@ struct TrainingView: View {
             VolumeControlSheet(
                 metronomeVolume: $viewModel.metronomeVolume,
                 voiceVolume: $viewModel.voiceVolume,
+                metronomeBPM: $viewModel.metronomeBPM,
                 onMetronomeVolumeChange: { viewModel.setMetronomeVolume($0) },
-                onVoiceVolumeChange: { viewModel.setVoiceVolume($0) }
+                onVoiceVolumeChange: { viewModel.setVoiceVolume($0) },
+                onBPMChange: { viewModel.setMetronomeBPM($0) }
             )
-            .presentationDetents([.height(280)])
+            .presentationDetents([.height(380)])
         }
         .alert("Finalizar Entrenamiento", isPresented: $showStopConfirmation) {
             Button("Guardar y Salir", role: .destructive) {

@@ -652,11 +652,13 @@ final class TrainingViewModel: ObservableObject {
         session.maxHeartRate = maxHeartRate
         session.minHeartRate = minHeartRate == 999 ? 0 : minHeartRate
         session.timeInZone = timeInZone
+        session.totalSteps = sessionSteps
+        session.isWalkingWorkout = isWalkingWorkout
         session.score = calculateScore(session)
         do {
             try await sessionRepository.save(session)
             self.currentSession = session
-            Log.training.info("Session saved: \(session.planName), score=\(session.score)")
+            Log.training.info("Session saved: \(session.planName), score=\(session.score), steps=\(session.totalSteps)")
         } catch {
             Log.training.error("Failed to save session: \(error)")
         }

@@ -322,14 +322,33 @@ struct ProgressDashboardView: View {
     }
 
     private var sessionListView: some View {
-        List(sessions) { session in
-            SessionRowView(session: session)
-                .contentShape(Rectangle())
-                .onTapGesture {
-                    selectedSession = session
-                }
+        List {
+            ForEach(sessions) { session in
+                SessionRowView(session: session)
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        selectedSession = session
+                    }
+            }
+            .onDelete(perform: deleteSessions)
         }
         .listStyle(.plain)
+    }
+
+    private func deleteSessions(at offsets: IndexSet) {
+        Task {
+            for index in offsets {
+                let session = sessions[index]
+                do {
+                    try await sessionRepository.delete(session)
+                    Log.persistence.info("Deleted session: \(session.planName)")
+                } catch {
+                    Log.persistence.error("Failed to delete session: \(error)")
+                }
+            }
+            // Reload after deletion
+            await loadSessions()
+        }
     }
 
     private func loadSessions() async {
@@ -350,10 +369,11 @@ struct SessionRowView: View {
 
     var body: some View {
         HStack(spacing: DesignTokens.Spacing.md) {
-            // Status indicator
-            Circle()
-                .fill(session.isCompleted ? Color.green : Color.orange)
-                .frame(width: 10, height: 10)
+            // Status indicator with workout type icon
+            Image(systemName: session.isWalkingWorkout ? "figure.walk" : "figure.run")
+                .font(.title3)
+                .foregroundStyle(session.isCompleted ? Color.green : Color.orange)
+                .frame(width: 24)
 
             VStack(alignment: .leading, spacing: DesignTokens.Spacing.xxs) {
                 Text(session.planName)
@@ -362,7 +382,11 @@ struct SessionRowView: View {
                 HStack(spacing: DesignTokens.Spacing.md) {
                     Label(session.durationFormatted, systemImage: "clock")
                     Label(session.distanceFormatted, systemImage: "location")
-                    if session.avgHeartRate > 0 {
+
+                    // Show steps for walking workouts, HR for running
+                    if session.isWalkingWorkout && session.totalSteps > 0 {
+                        Label(session.stepsFormatted, systemImage: "shoeprints.fill")
+                    } else if session.avgHeartRate > 0 {
                         Label("\(session.avgHeartRate) lpm", systemImage: "heart.fill")
                     }
                 }

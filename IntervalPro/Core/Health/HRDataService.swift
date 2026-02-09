@@ -86,29 +86,13 @@ final class HRDataService: ObservableObject {
             }
             .store(in: &cancellables)
 
-        // Subscribe to Garmin pace/speed/cadence
-        garminManager.pacePublisher
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] pace in
-                self?.currentPace = pace
-            }
-            .store(in: &cancellables)
+        // NOTE: We do NOT subscribe to Garmin pace/speed/cadence
+        // Garmin only provides HR - pace/cadence comes from iPhone pedometer
+        // This is because Garmin RSC data is unreliable when connected via BLE
+        // The watch should only transmit HR and optionally GPS
 
-        garminManager.speedPublisher
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] speed in
-                self?.currentSpeed = speed
-            }
-            .store(in: &cancellables)
-
-        garminManager.cadencePublisher
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] cadence in
-                self?.processCadence(cadence, source: .garmin)
-            }
-            .store(in: &cancellables)
-
-        // Subscribe to iPhone pedometer cadence (primary source for cadence)
+        // Subscribe to iPhone pedometer cadence (PRIMARY source for cadence)
+        // Always use iPhone pedometer for cadence, even when Garmin connected
         pedometerService.cadencePublisher
             .receive(on: DispatchQueue.main)
             .sink { [weak self] cadence in
@@ -116,16 +100,14 @@ final class HRDataService: ObservableObject {
             }
             .store(in: &cancellables)
 
-        // Subscribe to iPhone pedometer pace (fallback when no Garmin)
+        // Subscribe to iPhone pedometer pace (PRIMARY source for pace)
+        // Always use iPhone pedometer for pace - Garmin only provides HR
         pedometerService.pacePublisher
             .receive(on: DispatchQueue.main)
             .sink { [weak self] pace in
                 guard let self = self else { return }
-                // Only use pedometer pace if Garmin is not connected
-                if !self.garminManager.isConnected {
-                    self.currentPace = pace
-                    self.currentSpeed = 3600.0 / pace  // Convert sec/km to km/h
-                }
+                self.currentPace = pace
+                self.currentSpeed = pace > 0 ? 3600.0 / pace : 0  // Convert sec/km to km/h
             }
             .store(in: &cancellables)
 
@@ -253,17 +235,10 @@ final class HRDataService: ObservableObject {
 
     // MARK: - Cadence Processing (Zone Tracking)
     /// Process cadence data - THIS is what zone tracking uses
-    /// Sources: Garmin (if available) or iPhone pedometer (primary)
+    /// Source: iPhone pedometer (always - Garmin only provides HR)
     private func processCadence(_ cadence: Int, source: DataSource) {
-        // Source prioritization: Garmin > Pedometer
-        // If Garmin is connected and providing cadence, ignore pedometer
-        if source == .pedometer && garminManager.isConnected && currentCadence > 0 {
-            // Only ignore if we've recently received Garmin cadence
-            return
-        }
-
-        // Validate cadence range (typical running: 140-200 SPM)
-        guard cadence >= 100 && cadence <= 220 else {
+        // Validate cadence range (typical running/walking: 80-220 SPM)
+        guard cadence >= 80 && cadence <= 220 else {
             Log.health.warning("Cadence outlier filtered: \(cadence) from \(source.rawValue)")
             return
         }
