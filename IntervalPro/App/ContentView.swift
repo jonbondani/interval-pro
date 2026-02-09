@@ -340,7 +340,7 @@ struct ProgressDashboardView: View {
             for index in offsets {
                 let session = sessions[index]
                 do {
-                    try await sessionRepository.delete(session)
+                    try await sessionRepository.delete(id: session.id)
                     Log.persistence.info("Deleted session: \(session.planName)")
                 } catch {
                     Log.persistence.error("Failed to delete session: \(error)")
