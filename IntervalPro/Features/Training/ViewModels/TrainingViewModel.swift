@@ -48,6 +48,10 @@ final class TrainingViewModel: ObservableObject {
     @Published var bestPace: Double = 0        // Best session avg pace (sec/km)
     @Published var paceVsBest: Double = 0      // Current pace - best pace (negative = faster)
 
+    // MARK: - Published State - Best Pace Per Block (across ALL sessions)
+    /// Maps block index (1-based) → best (lowest) pace in sec/km across all historical sessions for this plan
+    @Published var bestPacesPerBlock: [Int: Double] = [:]
+
     // MARK: - Published State - Same-Block Interval Comparison
     @Published var bestSameBlockPace: Double = 0       // Best pace from prev same-block intervals
     @Published var currentIntervalPaceVsBest: Double = 0  // Current - best (negative = faster)
@@ -157,19 +161,11 @@ final class TrainingViewModel: ObservableObject {
         bestSameBlockPace > 0 && currentPhase == .work
     }
 
-    /// Best pace from the best historical session for the current block number.
-    /// Used to populate RÉCORD when bestSession has per-interval data.
-    var bestBlockPaceFromHistory: Double {
-        guard let best = bestSession else { return 0 }
-        return best.intervals
-            .filter { $0.phase == .work && $0.blockNumber == currentBlock && $0.avgPace > 0 }
-            .map(\.avgPace)
-            .min() ?? 0
-    }
-
-    /// Effective record pace: prefer per-block history, fall back to overall session avgPace.
+    /// Effective record pace for the current block (best across ALL historical sessions).
+    /// Falls back to overall best session avgPace when no per-block data available.
     var effectiveBestPace: Double {
-        let blockBest = bestBlockPaceFromHistory
+        let blockKey = currentBlock > 0 ? currentBlock : 1
+        let blockBest = bestPacesPerBlock[blockKey] ?? 0
         if blockBest > 0 { return blockBest }
         return bestPace
     }
@@ -348,13 +344,16 @@ final class TrainingViewModel: ObservableObject {
         intervalTimer.configure(with: plan)
         metronomeBPM = plan.workZone.targetBPM
 
-        // Load best session for comparison
+        // Load best session for time-in-zone comparison (session-level metric)
         bestSession = try? await sessionRepository.fetchBest(forPlanId: plan.id)
+
+        // Load best pace per block across ALL sessions for this plan
+        self.bestPacesPerBlock = (try? await sessionRepository.fetchBestPacesPerBlock(forPlanId: plan.id)) ?? [:]
 
         // Detect and connect to music service
         await musicController.detectActiveService()
 
-        Log.training.info("Training configured: \(plan.name)")
+        Log.training.info("Training configured: \(plan.name), bestPacesPerBlock: \(self.bestPacesPerBlock)")
     }
 
     // MARK: - Control
@@ -694,6 +693,16 @@ final class TrainingViewModel: ObservableObject {
         intervalRecords.append(record)
         hrSamples = []
         currentIntervalRecord = nil
+
+        // Update in-memory best pace for this block live during training
+        if record.phase == .work, record.avgPace > 0 {
+            let k = record.blockNumber > 0 ? record.blockNumber : 1
+            if let existing = bestPacesPerBlock[k] {
+                if record.avgPace < existing { bestPacesPerBlock[k] = record.avgPace }
+            } else {
+                bestPacesPerBlock[k] = record.avgPace
+            }
+        }
     }
 
     func saveSession(completed: Bool) async {
@@ -802,3 +811,4 @@ extension TrainingViewModel {
         return vm
     }
 }
+

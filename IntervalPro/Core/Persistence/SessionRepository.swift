@@ -11,6 +11,8 @@ protocol SessionRepositoryProtocol: AnyObject {
     func fetchByPlan(planId: UUID) async throws -> [TrainingSession]
     func fetchBest(forPlanId: UUID) async throws -> TrainingSession?
     func fetchInDateRange(from: Date, to: Date) async throws -> [TrainingSession]
+    func fetchBestPacesPerBlock(forPlanId: UUID) async throws -> [Int: Double]
+    func migrateDefaultPlanIds() async throws
     func delete(id: UUID) async throws
     func deleteAll() async throws
 }
@@ -82,6 +84,71 @@ final class SessionRepository: SessionRepositoryProtocol, ObservableObject {
         return entities.compactMap { $0.toDomainModel() }
     }
 
+    /// Scans ALL sessions for a plan and returns the best (lowest) pace per block index.
+    /// Block index is 1-based. Handles both new data (blockNumber set) and old data (positional).
+    func fetchBestPacesPerBlock(forPlanId planId: UUID) async throws -> [Int: Double] {
+        let context = coreDataStack.viewContext
+        let request = TrainingSessionEntity.fetchAllByPlan(planId)
+        let entities = try context.fetch(request)
+        var best: [Int: Double] = [:]
+        for entity in entities {
+            guard let data = entity.intervalsData,
+                  let intervals = try? JSONDecoder().decode([IntervalRecord].self, from: data) else { continue }
+            let workIntervals = intervals.filter { $0.phase == .work && $0.avgPace > 0 }
+            guard !workIntervals.isEmpty else { continue }
+            let hasBlockData = workIntervals.contains { $0.blockNumber > 1 || $0.targetCadence > 0 }
+            if hasBlockData {
+                for iv in workIntervals {
+                    let k = iv.blockNumber
+                    if let existing = best[k] { if iv.avgPace < existing { best[k] = iv.avgPace } }
+                    else { best[k] = iv.avgPace }
+                }
+            } else {
+                // Old data: all blockNumber=1, use position within each series as block index
+                var seenSeries: [Int] = []
+                for iv in workIntervals { if !seenSeries.contains(iv.seriesNumber) { seenSeries.append(iv.seriesNumber) } }
+                let bySeries = Dictionary(grouping: workIntervals, by: \.seriesNumber)
+                for seriesNum in seenSeries {
+                    let seriesIntervals = bySeries[seriesNum] ?? []
+                    for (idx, iv) in seriesIntervals.enumerated() {
+                        let k = idx + 1
+                        if let existing = best[k] { if iv.avgPace < existing { best[k] = iv.avgPace } }
+                        else { best[k] = iv.avgPace }
+                    }
+                }
+            }
+        }
+        return best
+    }
+
+    // MARK: - Migration
+    /// Fixes sessions saved before stable plan UUIDs were introduced.
+    /// Matches by planName → updates planId to the stable hardcoded value.
+    func migrateDefaultPlanIds() async throws {
+        let stableIds: [String: UUID] = [
+            "Recomendado":    UUID(uuidString: "00000001-0000-0000-0000-000000000001")!,
+            "Principiante":   UUID(uuidString: "00000002-0000-0000-0000-000000000002")!,
+            "Intermedio":     UUID(uuidString: "00000003-0000-0000-0000-000000000003")!,
+            "Avanzado":       UUID(uuidString: "00000004-0000-0000-0000-000000000004")!,
+            "Caminata 50min": UUID(uuidString: "00000005-0000-0000-0000-000000000005")!,
+        ]
+        let context = coreDataStack.viewContext
+        let request = TrainingSessionEntity.fetchRequest()
+        let entities = try context.fetch(request)
+        var changed = false
+        for entity in entities {
+            guard let name = entity.planName,
+                  let stableId = stableIds[name],
+                  entity.planId != stableId else { continue }
+            entity.planId = stableId
+            changed = true
+        }
+        if changed {
+            try await coreDataStack.save()
+            Log.persistence.info("Migrated session planIds to stable UUIDs")
+        }
+    }
+
     // MARK: - Delete
     func delete(id: UUID) async throws {
         let context = coreDataStack.viewContext
@@ -137,6 +204,10 @@ final class MockSessionRepository: SessionRepositoryProtocol {
     func delete(id: UUID) async throws {
         sessions.removeAll { $0.id == id }
     }
+
+    func migrateDefaultPlanIds() async throws { }
+
+    func fetchBestPacesPerBlock(forPlanId planId: UUID) async throws -> [Int: Double] { [:] }
 
     func deleteAll() async throws {
         sessions.removeAll()

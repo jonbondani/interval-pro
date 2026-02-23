@@ -119,11 +119,21 @@ extension TrainingSessionEntity {
 
     static func fetchBestSession(forPlanId planId: UUID) -> NSFetchRequest<TrainingSessionEntity> {
         let request = fetchRequest()
-        request.predicate = NSPredicate(format: "planId == %@ AND isCompleted == YES", planId as CVarArg)
+        request.predicate = NSPredicate(format: "planId == %@", planId as CVarArg)
         request.sortDescriptors = [
             NSSortDescriptor(keyPath: \TrainingSessionEntity.score, ascending: false)
         ]
         request.fetchLimit = 1
+        return request
+    }
+
+    /// All sessions for a plan regardless of completion — used for best-pace-per-block scan.
+    static func fetchAllByPlan(_ planId: UUID) -> NSFetchRequest<TrainingSessionEntity> {
+        let request = fetchRequest()
+        request.predicate = NSPredicate(format: "planId == %@", planId as CVarArg)
+        request.sortDescriptors = [
+            NSSortDescriptor(keyPath: \TrainingSessionEntity.startDate, ascending: false)
+        ]
         return request
     }
 

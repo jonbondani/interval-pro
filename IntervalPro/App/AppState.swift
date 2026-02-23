@@ -22,6 +22,11 @@ final class AppState: ObservableObject {
     init(userDefaults: UserDefaults = .standard) {
         self.userDefaults = userDefaults
         self.isOnboardingComplete = userDefaults.bool(forKey: Keys.onboardingComplete)
+
+        // Migrate sessions saved before stable plan UUIDs were introduced
+        Task {
+            try? await SessionRepository().migrateDefaultPlanIds()
+        }
     }
 
     // MARK: - Methods

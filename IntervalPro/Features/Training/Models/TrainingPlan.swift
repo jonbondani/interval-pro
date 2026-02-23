@@ -186,6 +186,7 @@ extension TrainingPlan {
     /// Recommended progressive pyramid workout
     /// Progresión: 6:00/km → 5:30/km → 5:00/km
     static let recommended = TrainingPlan(
+        id: UUID(uuidString: "00000001-0000-0000-0000-000000000001")!,
         name: "Recomendado",
         workBlocks: [
             WorkBlock(
@@ -233,6 +234,7 @@ extension TrainingPlan {
     /// Beginner template: Lower intensity, longer rest
     /// Ritmo objetivo: 6:30/km (suave)
     static let beginner = TrainingPlan(
+        id: UUID(uuidString: "00000002-0000-0000-0000-000000000002")!,
         name: "Principiante",
         workZone: HeartRateZone(
             targetBPM: 160,
@@ -259,6 +261,7 @@ extension TrainingPlan {
     /// Intermediate template: Standard intensity
     /// Ritmo objetivo: 5:30/km
     static let intermediate = TrainingPlan(
+        id: UUID(uuidString: "00000003-0000-0000-0000-000000000003")!,
         name: "Intermedio",
         workZone: HeartRateZone(
             targetBPM: 170,
@@ -280,6 +283,7 @@ extension TrainingPlan {
     /// Advanced template: High intensity, shorter rest
     /// Ritmo objetivo: 4:45/km (competición)
     static let advanced = TrainingPlan(
+        id: UUID(uuidString: "00000004-0000-0000-0000-000000000004")!,
         name: "Avanzado",
         workZone: HeartRateZone(
             targetBPM: 180,
@@ -301,6 +305,7 @@ extension TrainingPlan {
     /// Walking workout: 50 min steady pace
     /// Ritmo objetivo: 9:00-9:30/km (6.5-7 km/h)
     static let walking = TrainingPlan(
+        id: UUID(uuidString: "00000005-0000-0000-0000-000000000005")!,
         name: "Caminata 50min",
         workZone: HeartRateZone(
             targetBPM: 115,           // Cadencia caminata: 110-120 SPM
