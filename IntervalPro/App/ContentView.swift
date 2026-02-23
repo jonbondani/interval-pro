@@ -561,15 +561,20 @@ struct SessionDetailView: View {
         }
     }
 
+    /// Work-only intervals grouped by block (cadence target). Never shows warmup/cooldown/rest.
     private var intervalsSection: some View {
         VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
-            Text("Intervalos")
+            Text("Intervalos de Trabajo")
                 .font(.headline)
 
-            // Simple bar chart for intervals
-            VStack(spacing: DesignTokens.Spacing.xs) {
-                ForEach(session.intervals) { interval in
-                    IntervalBar(interval: interval, maxDuration: maxIntervalDuration)
+            let groups = workIntervalGroups
+            if groups.isEmpty {
+                Text("Sin intervalos de trabajo registrados")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            } else {
+                ForEach(groups, id: \.blockNumber) { group in
+                    WorkIntervalGroup(group: group)
                 }
             }
         }
@@ -578,8 +583,30 @@ struct SessionDetailView: View {
         .clipShape(RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.medium))
     }
 
-    private var maxIntervalDuration: TimeInterval {
-        session.intervals.map(\.duration).max() ?? 1
+    /// Group work intervals by blockNumber, ordered by first occurrence
+    private var workIntervalGroups: [WorkIntervalGroupData] {
+        let workIntervals = session.intervals.filter { $0.phase == .work }
+        guard !workIntervals.isEmpty else { return [] }
+
+        // Gather unique blocks in order of appearance
+        var seen: [Int] = []
+        for interval in workIntervals {
+            if !seen.contains(interval.blockNumber) {
+                seen.append(interval.blockNumber)
+            }
+        }
+
+        return seen.map { blockNum in
+            let intervals = workIntervals.filter { $0.blockNumber == blockNum }
+            let targetCadence = intervals.first?.targetCadence ?? 0
+            let bestPace = intervals.filter { $0.avgPace > 0 }.map(\.avgPace).min() ?? 0
+            return WorkIntervalGroupData(
+                blockNumber: blockNum,
+                targetCadence: targetCadence,
+                intervals: intervals,
+                bestPace: bestPace
+            )
+        }
     }
 
     private var statsGrid: some View {
@@ -636,39 +663,133 @@ struct SummaryCard: View {
     }
 }
 
-// MARK: - Interval Bar
-struct IntervalBar: View {
+// MARK: - Work Interval Group Data Model
+struct WorkIntervalGroupData {
+    let blockNumber: Int
+    let targetCadence: Int
+    let intervals: [IntervalRecord]
+    let bestPace: Double  // lowest (fastest) avgPace in group, 0 if none
+}
+
+// MARK: - Work Interval Group View
+struct WorkIntervalGroup: View {
+    let group: WorkIntervalGroupData
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
+            // Group header
+            HStack {
+                Image(systemName: "figure.run")
+                    .font(.caption)
+                    .foregroundStyle(.red)
+
+                Text(group.targetCadence > 0 ? "\(group.targetCadence) SPM" : "Bloque \(group.blockNumber)")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.primary)
+
+                Spacer()
+
+                Text("\(group.intervals.count) serie\(group.intervals.count > 1 ? "s" : "")")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.bottom, 2)
+
+            Divider()
+
+            ForEach(group.intervals) { interval in
+                WorkIntervalCard(
+                    interval: interval,
+                    seriesLabel: "Serie \(interval.seriesNumber)",
+                    isBest: group.bestPace > 0 && interval.avgPace == group.bestPace
+                )
+            }
+        }
+        .padding(DesignTokens.Spacing.sm)
+        .background(Color(.tertiarySystemBackground))
+        .clipShape(RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.small))
+    }
+}
+
+// MARK: - Work Interval Card
+struct WorkIntervalCard: View {
     let interval: IntervalRecord
-    let maxDuration: TimeInterval
+    let seriesLabel: String
+    let isBest: Bool
 
     var body: some View {
         HStack(spacing: DesignTokens.Spacing.sm) {
-            // Phase indicator
-            Text(interval.phase.shortName)
-                .font(.caption.weight(.medium))
-                .foregroundStyle(interval.phase.color)
-                .frame(width: 50, alignment: .leading)
+            // Series label + best badge
+            VStack(alignment: .leading, spacing: 2) {
+                Text(seriesLabel)
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(.primary)
 
-            // Bar
-            GeometryReader { geo in
-                RoundedRectangle(cornerRadius: 4)
-                    .fill(interval.phase.color.opacity(0.7))
-                    .frame(width: geo.size.width * CGFloat(interval.duration / maxDuration))
+                if isBest {
+                    HStack(spacing: 2) {
+                        Image(systemName: "star.fill")
+                            .font(.system(size: 8))
+                        Text("MEJOR")
+                            .font(.system(size: 9, weight: .black))
+                    }
+                    .foregroundStyle(.yellow)
+                }
             }
-            .frame(height: 20)
+            .frame(width: 55, alignment: .leading)
 
-            // Duration
-            Text(formatDuration(interval.duration))
-                .font(.caption.monospacedDigit())
-                .foregroundStyle(.secondary)
-                .frame(width: 40, alignment: .trailing)
+            Divider().frame(height: 28)
+
+            // Metrics
+            HStack(spacing: DesignTokens.Spacing.md) {
+                metricColumn(
+                    value: interval.paceFormatted,
+                    label: "RITMO",
+                    icon: "speedometer"
+                )
+
+                metricColumn(
+                    value: interval.distanceFormatted,
+                    label: "DIST",
+                    icon: "location"
+                )
+
+                metricColumn(
+                    value: interval.speedFormatted,
+                    label: "VEL",
+                    icon: "gauge.with.dots.needle.bottom.50percent"
+                )
+
+                if interval.avgHR > 0 {
+                    metricColumn(
+                        value: "\(interval.avgHR)",
+                        label: "FC",
+                        icon: "heart.fill",
+                        tint: .red
+                    )
+                }
+            }
+
+            Spacer()
         }
+        .padding(.vertical, DesignTokens.Spacing.xxs)
     }
 
-    private func formatDuration(_ duration: TimeInterval) -> String {
-        let minutes = Int(duration) / 60
-        let seconds = Int(duration) % 60
-        return String(format: "%d:%02d", minutes, seconds)
+    private func metricColumn(value: String, label: String, icon: String, tint: Color = .secondary) -> some View {
+        VStack(spacing: 1) {
+            Image(systemName: icon)
+                .font(.system(size: 8))
+                .foregroundStyle(tint)
+
+            Text(value)
+                .font(.system(size: 12, weight: .semibold, design: .rounded))
+                .foregroundStyle(.primary)
+                .minimumScaleFactor(0.8)
+
+            Text(label)
+                .font(.system(size: 9))
+                .foregroundStyle(.secondary)
+        }
+        .frame(minWidth: 44)
     }
 }
 

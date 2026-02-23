@@ -122,11 +122,14 @@ struct TrainingSession: Identifiable, Codable, Equatable {
 }
 
 // MARK: - Interval Record
-struct IntervalRecord: Identifiable, Codable, Equatable {
+struct IntervalRecord: Identifiable, Equatable {
     let id: UUID
     let phase: IntervalPhase
     let seriesNumber: Int
+    let blockNumber: Int    // Which block within a series (1-based). 1 for simple plans.
+    let targetCadence: Int  // Target cadence (SPM) for this interval. 0 if unknown.
     let startTime: TimeInterval  // offset from session start
+    let startDistance: Double    // totalDistance at interval start (meters)
     var duration: TimeInterval
     var avgHR: Int
     var maxHR: Int
@@ -143,9 +146,28 @@ struct IntervalRecord: Identifiable, Codable, Equatable {
     }
 
     var paceFormatted: String {
+        guard avgPace > 0 else { return "--:--" }
         let minutes = Int(avgPace) / 60
         let seconds = Int(avgPace) % 60
-        return String(format: "%d:%02d", minutes, seconds)
+        return String(format: "%d:%02d /km", minutes, seconds)
+    }
+
+    var avgSpeed: Double {
+        guard avgPace > 0 else { return 0 }
+        return 3600.0 / avgPace  // km/h
+    }
+
+    var speedFormatted: String {
+        guard avgSpeed > 0 else { return "--" }
+        return String(format: "%.1f km/h", avgSpeed)
+    }
+
+    var distanceFormatted: String {
+        guard distance > 0 else { return "--" }
+        if distance < 1000 {
+            return String(format: "%.0f m", distance)
+        }
+        return String(format: "%.2f km", distance / 1000)
     }
 
     // MARK: - Init
@@ -153,7 +175,10 @@ struct IntervalRecord: Identifiable, Codable, Equatable {
         id: UUID = UUID(),
         phase: IntervalPhase,
         seriesNumber: Int,
+        blockNumber: Int = 1,
+        targetCadence: Int = 0,
         startTime: TimeInterval,
+        startDistance: Double = 0,
         duration: TimeInterval = 0,
         avgHR: Int = 0,
         maxHR: Int = 0,
@@ -166,7 +191,10 @@ struct IntervalRecord: Identifiable, Codable, Equatable {
         self.id = id
         self.phase = phase
         self.seriesNumber = seriesNumber
+        self.blockNumber = blockNumber
+        self.targetCadence = targetCadence
         self.startTime = startTime
+        self.startDistance = startDistance
         self.duration = duration
         self.avgHR = avgHR
         self.maxHR = maxHR
@@ -175,5 +203,53 @@ struct IntervalRecord: Identifiable, Codable, Equatable {
         self.avgPace = avgPace
         self.timeInZone = timeInZone
         self.hrSamples = hrSamples
+    }
+}
+
+// MARK: - IntervalRecord Codable (custom for backwards compatibility)
+extension IntervalRecord: Codable {
+    enum CodingKeys: String, CodingKey {
+        case id, phase, seriesNumber, blockNumber, targetCadence
+        case startTime, startDistance
+        case duration, avgHR, maxHR, minHR, distance, avgPace, timeInZone, hrSamples
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(UUID.self, forKey: .id)
+        phase = try c.decode(IntervalPhase.self, forKey: .phase)
+        seriesNumber = try c.decode(Int.self, forKey: .seriesNumber)
+        // New fields — default to safe values for old sessions that predate them
+        blockNumber = (try? c.decode(Int.self, forKey: .blockNumber)) ?? 1
+        targetCadence = (try? c.decode(Int.self, forKey: .targetCadence)) ?? 0
+        startTime = try c.decode(TimeInterval.self, forKey: .startTime)
+        startDistance = (try? c.decode(Double.self, forKey: .startDistance)) ?? 0
+        duration = try c.decode(TimeInterval.self, forKey: .duration)
+        avgHR = try c.decode(Int.self, forKey: .avgHR)
+        maxHR = try c.decode(Int.self, forKey: .maxHR)
+        minHR = try c.decode(Int.self, forKey: .minHR)
+        distance = try c.decode(Double.self, forKey: .distance)
+        avgPace = try c.decode(Double.self, forKey: .avgPace)
+        timeInZone = try c.decode(TimeInterval.self, forKey: .timeInZone)
+        hrSamples = (try? c.decode([HRSample].self, forKey: .hrSamples)) ?? []
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(id, forKey: .id)
+        try c.encode(phase, forKey: .phase)
+        try c.encode(seriesNumber, forKey: .seriesNumber)
+        try c.encode(blockNumber, forKey: .blockNumber)
+        try c.encode(targetCadence, forKey: .targetCadence)
+        try c.encode(startTime, forKey: .startTime)
+        try c.encode(startDistance, forKey: .startDistance)
+        try c.encode(duration, forKey: .duration)
+        try c.encode(avgHR, forKey: .avgHR)
+        try c.encode(maxHR, forKey: .maxHR)
+        try c.encode(minHR, forKey: .minHR)
+        try c.encode(distance, forKey: .distance)
+        try c.encode(avgPace, forKey: .avgPace)
+        try c.encode(timeInZone, forKey: .timeInZone)
+        try c.encode(hrSamples, forKey: .hrSamples)
     }
 }

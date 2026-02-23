@@ -49,6 +49,9 @@ struct TrainingView: View {
                             heartRateDisplay     // FC - just display
                             metricsRow
                             paceComparisonSection
+                            if viewModel.hasSameBlockComparison {
+                                sameBlockComparisonBanner
+                            }
                             seriesProgress
                         }
                     }
@@ -443,6 +446,44 @@ struct TrainingView: View {
         } else {
             return .blue  // iPhone sensors
         }
+    }
+
+    // MARK: - Same-Block Comparison Banner
+    private var sameBlockComparisonBanner: some View {
+        HStack(spacing: DesignTokens.Spacing.sm) {
+            Image(systemName: viewModel.isAheadOfSameBlockBest ? "bolt.fill" : "bolt")
+                .font(.caption)
+                .foregroundStyle(viewModel.isAheadOfSameBlockBest ? .yellow : .secondary)
+
+            Text("VS ronda anterior:")
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(.secondary)
+
+            Text(viewModel.formattedSameBlockBestPace)
+                .font(.caption.monospacedDigit())
+                .foregroundStyle(.secondary)
+
+            Divider().frame(height: 14)
+
+            Text(viewModel.formattedSameBlockDelta)
+                .font(.caption.monospacedDigit().bold())
+                .foregroundStyle(viewModel.isAheadOfSameBlockBest ? .green : .orange)
+
+            if viewModel.isAheadOfSameBlockBest {
+                Text("¡MEJOR!")
+                    .font(.system(size: 10, weight: .black))
+                    .foregroundStyle(.green)
+            }
+
+            Spacer()
+        }
+        .padding(.vertical, DesignTokens.Spacing.xs)
+        .padding(.horizontal, DesignTokens.Spacing.sm)
+        .background(
+            (viewModel.isAheadOfSameBlockBest ? Color.green : Color.orange).opacity(0.1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.small))
+        .animation(.easeInOut(duration: 0.3), value: viewModel.isAheadOfSameBlockBest)
     }
 
     private var paceStatusText: String {

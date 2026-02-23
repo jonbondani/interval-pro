@@ -52,15 +52,16 @@ final class MetronomeEngine: NSObject, ObservableObject, AudioEngineProtocol {
     func configureAudioSession() throws {
         do {
             // Configure for mixing with other audio (Spotify, Apple Music)
+            // .mixWithOthers ONLY - duckOthers would reduce music volume severely while metronome runs
             try audioSession.setCategory(
                 .playback,
                 mode: .default,
-                options: [.mixWithOthers, .duckOthers]
+                options: [.mixWithOthers]
             )
 
             try audioSession.setActive(true)
 
-            Log.audio.info("Audio session configured: playback, mixWithOthers, duckOthers")
+            Log.audio.info("Audio session configured: playback, mixWithOthers")
         } catch {
             Log.audio.error("Audio session configuration failed: \(error)")
             throw AudioEngineError.sessionConfigurationFailed

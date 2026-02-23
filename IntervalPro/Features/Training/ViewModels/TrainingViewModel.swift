@@ -48,6 +48,11 @@ final class TrainingViewModel: ObservableObject {
     @Published var bestPace: Double = 0        // Best session avg pace (sec/km)
     @Published var paceVsBest: Double = 0      // Current pace - best pace (negative = faster)
 
+    // MARK: - Published State - Same-Block Interval Comparison
+    @Published var bestSameBlockPace: Double = 0       // Best pace from prev same-block intervals
+    @Published var currentIntervalPaceVsBest: Double = 0  // Current - best (negative = faster)
+    @Published var isAheadOfSameBlockBest: Bool = false
+
     // MARK: - Published State - Audio
     @Published var isMetronomeEnabled: Bool = true
     @Published var metronomeBPM: Int = 170
@@ -85,6 +90,9 @@ final class TrainingViewModel: ObservableObject {
     // Internal access to session repository
     var sessionRepository: SessionRepositoryProtocol { _sessionRepository }
     private let _sessionRepository: SessionRepositoryProtocol
+
+    // MARK: - Same-Block Announcement Tracking
+    private var hasAnnouncedSameBlockImprovement = false
 
     // MARK: - Subscriptions
     private var cancellables = Set<AnyCancellable>()
@@ -147,6 +155,23 @@ final class TrainingViewModel: ObservableObject {
 
     var isSlowerThanBest: Bool {
         paceVsBest > 5  // At least 5 sec/km slower
+    }
+
+    var hasSameBlockComparison: Bool {
+        bestSameBlockPace > 0 && currentPhase == .work
+    }
+
+    var formattedSameBlockBestPace: String {
+        bestSameBlockPace > 0 ? bestSameBlockPace.formattedPace : "--:--"
+    }
+
+    var formattedSameBlockDelta: String {
+        guard bestSameBlockPace > 0 else { return "--:--" }
+        let absDelta = abs(currentIntervalPaceVsBest)
+        let minutes = Int(absDelta) / 60
+        let seconds = Int(absDelta) % 60
+        let sign = currentIntervalPaceVsBest < 0 ? "-" : "+"
+        return String(format: "%@%d:%02d", sign, minutes, seconds)
     }
 
     var activeService: MusicServiceType {
@@ -627,12 +652,21 @@ final class TrainingViewModel: ObservableObject {
 
     // MARK: - Interval Recording
     func startNewInterval(phase: IntervalPhase) {
-        currentIntervalRecord = IntervalRecord(phase: phase, seriesNumber: currentSeries, startTime: totalElapsedTime)
+        hasAnnouncedSameBlockImprovement = false
+        currentIntervalRecord = IntervalRecord(
+            phase: phase,
+            seriesNumber: currentSeries,
+            blockNumber: currentBlock,
+            targetCadence: targetZone?.targetCadence ?? 0,
+            startTime: totalElapsedTime,
+            startDistance: totalDistance
+        )
     }
 
     func finalizeCurrentInterval() {
         guard var record = currentIntervalRecord else { return }
         record.duration = totalElapsedTime - record.startTime
+        record.distance = max(0, totalDistance - record.startDistance)
         record.hrSamples = hrSamples
         record.avgHR = hrSamples.isEmpty ? 0 : hrSamples.map(\.bpm).reduce(0, +) / hrSamples.count
         record.maxHR = hrSamples.map(\.bpm).max() ?? 0
@@ -685,6 +719,44 @@ final class TrainingViewModel: ObservableObject {
         guard pace > 0 else { paceVsBest = 0; return }
         if let best = bestSession, let bp = best.avgPace, bp > 0 { bestPace = bp; paceVsBest = pace - bp }
         else { bestPace = 0; paceVsBest = 0 }
+
+        updateSameBlockComparison(currentPace: pace)
+    }
+
+    private func updateSameBlockComparison(currentPace pace: Double) {
+        guard currentPhase == .work else {
+            bestSameBlockPace = 0
+            currentIntervalPaceVsBest = 0
+            isAheadOfSameBlockBest = false
+            return
+        }
+
+        // Find best pace from all completed work intervals of same block
+        let sameBlockBest = intervalRecords
+            .filter { $0.phase == .work && $0.blockNumber == currentBlock && $0.avgPace > 0 }
+            .map(\.avgPace)
+            .min()
+
+        guard let best = sameBlockBest else {
+            bestSameBlockPace = 0
+            currentIntervalPaceVsBest = 0
+            isAheadOfSameBlockBest = false
+            return
+        }
+
+        bestSameBlockPace = best
+        currentIntervalPaceVsBest = pace - best  // negative = faster than best
+
+        let wasAhead = isAheadOfSameBlockBest
+        isAheadOfSameBlockBest = currentIntervalPaceVsBest < -5  // 5+ sec/km faster
+
+        // Announce once when improvement is first detected
+        if isAheadOfSameBlockBest && !wasAhead && !hasAnnouncedSameBlockImprovement {
+            hasAnnouncedSameBlockImprovement = true
+            Task {
+                await audioEngine.announce("¡Vas mejor que en la ronda anterior!")
+            }
+        }
     }
 }
 
