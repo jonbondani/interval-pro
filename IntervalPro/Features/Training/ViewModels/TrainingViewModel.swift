@@ -129,36 +129,49 @@ final class TrainingViewModel: ObservableObject {
         bestPace > 0 ? bestPace.formattedPace : "--:--"
     }
 
-    /// Returns pace difference formatted with +/- sign (negative is faster/better)
+    /// Returns pace difference formatted with +/- sign against effectiveBestPace (negative is faster/better)
     var formattedPaceDelta: String {
-        guard bestPace > 0, currentPace > 0 else { return "--:--" }
-
-        let absDelta = abs(paceVsBest)
+        guard effectiveBestPace > 0, currentPace > 0 else { return "--:--" }
+        let delta = currentPace - effectiveBestPace
+        let absDelta = abs(delta)
         let minutes = Int(absDelta) / 60
         let seconds = Int(absDelta) % 60
-
-        if paceVsBest < -5 {
-            // More than 5 seconds faster
+        if delta < -5 {
             return String(format: "-%d:%02d", minutes, seconds)
-        } else if paceVsBest > 5 {
-            // More than 5 seconds slower
+        } else if delta > 5 {
             return String(format: "+%d:%02d", minutes, seconds)
         } else {
-            // Within 5 seconds - essentially on pace
             return "0:00"
         }
     }
 
     var isFasterThanBest: Bool {
-        paceVsBest < -5  // At least 5 sec/km faster
+        effectiveBestPace > 0 && currentPace > 0 && (currentPace - effectiveBestPace) < -5
     }
 
     var isSlowerThanBest: Bool {
-        paceVsBest > 5  // At least 5 sec/km slower
+        effectiveBestPace > 0 && currentPace > 0 && (currentPace - effectiveBestPace) > 5
     }
 
     var hasSameBlockComparison: Bool {
         bestSameBlockPace > 0 && currentPhase == .work
+    }
+
+    /// Best pace from the best historical session for the current block number.
+    /// Used to populate RÉCORD when bestSession has per-interval data.
+    var bestBlockPaceFromHistory: Double {
+        guard let best = bestSession else { return 0 }
+        return best.intervals
+            .filter { $0.phase == .work && $0.blockNumber == currentBlock && $0.avgPace > 0 }
+            .map(\.avgPace)
+            .min() ?? 0
+    }
+
+    /// Effective record pace: prefer per-block history, fall back to overall session avgPace.
+    var effectiveBestPace: Double {
+        let blockBest = bestBlockPaceFromHistory
+        if blockBest > 0 { return blockBest }
+        return bestPace
     }
 
     var formattedSameBlockBestPace: String {
@@ -672,7 +685,12 @@ final class TrainingViewModel: ObservableObject {
         record.maxHR = hrSamples.map(\.bpm).max() ?? 0
         record.minHR = hrSamples.map(\.bpm).min() ?? 0
         record.timeInZone = timeInZone
-        record.avgPace = currentPace
+        // Compute avg pace from distance/time when available; fall back to live pace
+        if record.distance > 0 && record.duration > 0 {
+            record.avgPace = record.duration / (record.distance / 1000)
+        } else {
+            record.avgPace = currentPace
+        }
         intervalRecords.append(record)
         hrSamples = []
         currentIntervalRecord = nil
@@ -706,6 +724,15 @@ final class TrainingViewModel: ObservableObject {
         let paceScore = session.avgPace.map { max(0, min(100, (480 - $0) / 3)) } ?? 50
         let distScore = min(100, (session.totalDistance / (session.duration * 3.0)) * 100)
         return min(100, max(0, 0.4 * min(tizPct, 100) + 0.3 * paceScore + 0.2 * compRate + 0.1 * distScore))
+    }
+
+    func skipCurrentPhase() {
+        guard currentPhase == .warmup || currentPhase == .cooldown else { return }
+        if currentPhase == .warmup {
+            intervalTimer.skipWarmup()
+        } else {
+            intervalTimer.skipCooldown()
+        }
     }
 
     func updateBestSessionComparison() {

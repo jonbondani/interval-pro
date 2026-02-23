@@ -583,29 +583,49 @@ struct SessionDetailView: View {
         .clipShape(RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.medium))
     }
 
-    /// Group work intervals by blockNumber, ordered by first occurrence
+    /// Group work intervals by cadence target/block, handling both new data (blockNumber > 1)
+    /// and old data (all blockNumber == 1) via positional fallback.
     private var workIntervalGroups: [WorkIntervalGroupData] {
         let workIntervals = session.intervals.filter { $0.phase == .work }
         guard !workIntervals.isEmpty else { return [] }
 
-        // Gather unique blocks in order of appearance
-        var seen: [Int] = []
-        for interval in workIntervals {
-            if !seen.contains(interval.blockNumber) {
-                seen.append(interval.blockNumber)
-            }
-        }
+        // Detect new-format data: any interval with a distinct block or cadence
+        let hasBlockData = workIntervals.contains { $0.blockNumber > 1 || $0.targetCadence > 0 }
 
-        return seen.map { blockNum in
-            let intervals = workIntervals.filter { $0.blockNumber == blockNum }
-            let targetCadence = intervals.first?.targetCadence ?? 0
-            let bestPace = intervals.filter { $0.avgPace > 0 }.map(\.avgPace).min() ?? 0
-            return WorkIntervalGroupData(
-                blockNumber: blockNum,
-                targetCadence: targetCadence,
-                intervals: intervals,
-                bestPace: bestPace
-            )
+        if hasBlockData {
+            // Group by blockNumber in order of appearance
+            var seenBlocks: [Int] = []
+            for interval in workIntervals {
+                if !seenBlocks.contains(interval.blockNumber) { seenBlocks.append(interval.blockNumber) }
+            }
+            return seenBlocks.map { blockNum in
+                let blockIntervals = workIntervals.filter { $0.blockNumber == blockNum }
+                let cadence = blockIntervals.first?.targetCadence ?? 0
+                let bestPace = blockIntervals.filter { $0.avgPace > 0 }.map(\.avgPace).min() ?? 0
+                let entries = blockIntervals.map { (interval: $0, roundLabel: "Ronda \($0.seriesNumber)") }
+                return WorkIntervalGroupData(blockNumber: blockNum, targetCadence: cadence, entries: entries, bestPace: bestPace)
+            }
+        } else {
+            // Old data: all blockNumber == 1. Recover structure via positional grouping.
+            // Collect distinct series numbers in order of appearance
+            var seenSeries: [Int] = []
+            for interval in workIntervals {
+                if !seenSeries.contains(interval.seriesNumber) { seenSeries.append(interval.seriesNumber) }
+            }
+            let intervalsBySeries = Dictionary(grouping: workIntervals, by: \.seriesNumber)
+            let blocksPerSeries = seenSeries.compactMap { intervalsBySeries[$0]?.count }.max() ?? 1
+
+            return (0..<blocksPerSeries).map { blockIdx in
+                var entries: [(interval: IntervalRecord, roundLabel: String)] = []
+                for (roundIdx, seriesNum) in seenSeries.enumerated() {
+                    let seriesIntervals = intervalsBySeries[seriesNum] ?? []
+                    if blockIdx < seriesIntervals.count {
+                        entries.append((interval: seriesIntervals[blockIdx], roundLabel: "Ronda \(roundIdx + 1)"))
+                    }
+                }
+                let bestPace = entries.compactMap { $0.interval.avgPace > 0 ? $0.interval.avgPace : nil }.min() ?? 0
+                return WorkIntervalGroupData(blockNumber: blockIdx + 1, targetCadence: 0, entries: entries, bestPace: bestPace)
+            }
         }
     }
 
@@ -667,7 +687,8 @@ struct SummaryCard: View {
 struct WorkIntervalGroupData {
     let blockNumber: Int
     let targetCadence: Int
-    let intervals: [IntervalRecord]
+    /// Each entry pairs an interval with its display label (e.g. "Ronda 1")
+    let entries: [(interval: IntervalRecord, roundLabel: String)]
     let bestPace: Double  // lowest (fastest) avgPace in group, 0 if none
 }
 
@@ -683,13 +704,13 @@ struct WorkIntervalGroup: View {
                     .font(.caption)
                     .foregroundStyle(.red)
 
-                Text(group.targetCadence > 0 ? "\(group.targetCadence) SPM" : "Bloque \(group.blockNumber)")
+                Text(group.targetCadence > 0 ? "\(group.targetCadence) SPM" : "Intensidad \(group.blockNumber)")
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.primary)
 
                 Spacer()
 
-                Text("\(group.intervals.count) serie\(group.intervals.count > 1 ? "s" : "")")
+                Text("\(group.entries.count) ronda\(group.entries.count > 1 ? "s" : "")")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -697,11 +718,11 @@ struct WorkIntervalGroup: View {
 
             Divider()
 
-            ForEach(group.intervals) { interval in
+            ForEach(group.entries, id: \.interval.id) { entry in
                 WorkIntervalCard(
-                    interval: interval,
-                    seriesLabel: "Serie \(interval.seriesNumber)",
-                    isBest: group.bestPace > 0 && interval.avgPace == group.bestPace
+                    interval: entry.interval,
+                    seriesLabel: entry.roundLabel,
+                    isBest: group.bestPace > 0 && entry.interval.avgPace == group.bestPace
                 )
             }
         }

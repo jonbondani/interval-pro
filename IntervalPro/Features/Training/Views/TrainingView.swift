@@ -344,14 +344,14 @@ struct TrainingView: View {
     // MARK: - Pace Comparison Section
     private var paceComparisonSection: some View {
         HStack(spacing: DesignTokens.Spacing.sm) {
-            // Best pace to beat
+            // Best pace record
             VStack(spacing: 2) {
                 Text("RÉCORD")
                     .font(.system(size: 9, weight: .medium))
                     .foregroundStyle(.secondary)
 
-                if viewModel.bestPace > 0 {
-                    Text(viewModel.formattedBestPace)
+                if viewModel.effectiveBestPace > 0 {
+                    Text(viewModel.effectiveBestPace.formattedPace)
                         .font(.caption.monospacedDigit().bold())
                         .foregroundStyle(.primary)
                 } else {
@@ -371,7 +371,7 @@ struct TrainingView: View {
                     .foregroundStyle(.secondary)
 
                 HStack(spacing: 2) {
-                    if viewModel.bestPace > 0 && viewModel.currentPace > 0 {
+                    if viewModel.effectiveBestPace > 0 && viewModel.currentPace > 0 {
                         Image(systemName: paceComparisonIcon)
                             .font(.system(size: 10))
                             .foregroundStyle(paceComparisonColor)
@@ -390,9 +390,9 @@ struct TrainingView: View {
             Divider()
                 .frame(height: 24)
 
-            // Status indicator
+            // Pace status
             VStack(spacing: 2) {
-                Text("ESTADO")
+                Text("RITMO")
                     .font(.system(size: 9, weight: .medium))
                     .foregroundStyle(.secondary)
 
@@ -487,35 +487,34 @@ struct TrainingView: View {
     }
 
     private var paceStatusText: String {
-        guard viewModel.bestPace > 0 && viewModel.currentPace > 0 else {
-            return "Sin datos"
+        guard viewModel.effectiveBestPace > 0 && viewModel.currentPace > 0 else {
+            return "Sin récord"
         }
-
         if viewModel.isFasterThanBest {
             return "Mejor"
         } else if viewModel.isSlowerThanBest {
             return "Por debajo"
         } else {
-            return "En ritmo"
+            return "En récord"
         }
     }
 
     // MARK: - Series Progress
     private var seriesProgress: some View {
         VStack(spacing: DesignTokens.Spacing.sm) {
-            // Show block info for progressive workouts
+            // Round + cadence progress
             if viewModel.totalBlocks > 1 {
-                Text("Serie \(viewModel.currentSeries)/\(viewModel.totalSeries) · Bloque \(viewModel.currentBlock)/\(viewModel.totalBlocks)")
-                    .font(.headline)
-
-                // Show target cadence for current block
-                if let zone = viewModel.targetZone {
-                    Text("Cadencia: \(zone.targetCadence) SPM")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                HStack(spacing: DesignTokens.Spacing.sm) {
+                    Text("Ronda \(max(1, viewModel.currentSeries)) de \(viewModel.totalSeries)")
+                        .font(.headline)
+                    if let zone = viewModel.targetZone {
+                        Text("· \(zone.targetCadence) SPM")
+                            .font(.headline)
+                            .foregroundStyle(.secondary)
+                    }
                 }
             } else {
-                Text("Serie \(viewModel.currentSeries) de \(viewModel.totalSeries)")
+                Text("Ronda \(max(1, viewModel.currentSeries)) de \(viewModel.totalSeries)")
                     .font(.headline)
             }
 
@@ -549,50 +548,68 @@ struct TrainingView: View {
 
     // MARK: - Control Buttons
     private var controlButtons: some View {
-        HStack(spacing: DesignTokens.Spacing.xl) {
-            if viewModel.timerState == .stopped && viewModel.currentPhase == .idle {
-                // Start button
+        VStack(spacing: DesignTokens.Spacing.sm) {
+            // Skip button — only for warmup and cooldown
+            if viewModel.timerState == .running &&
+               (viewModel.currentPhase == .warmup || viewModel.currentPhase == .cooldown) {
                 Button {
-                    Task {
-                        try? await viewModel.startWorkout()
-                    }
+                    viewModel.skipCurrentPhase()
                 } label: {
-                    Label("Iniciar", systemImage: "play.fill")
-                        .font(.title2.bold())
-                        .foregroundStyle(.white)
-                        .frame(width: 200, height: 60)
-                        .background(.green)
+                    Label("Saltar", systemImage: "forward.fill")
+                        .font(.caption.bold())
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, DesignTokens.Spacing.lg)
+                        .padding(.vertical, DesignTokens.Spacing.xs)
+                        .background(Color(.secondarySystemBackground))
                         .clipShape(Capsule())
                 }
-            } else {
-                // Pause/Resume button
-                Button {
-                    Task {
-                        if viewModel.timerState == .running {
-                            await viewModel.pauseWorkout()
-                        } else {
-                            try? await viewModel.resumeWorkout()
-                        }
-                    }
-                } label: {
-                    Image(systemName: viewModel.timerState == .running ? "pause.fill" : "play.fill")
-                        .font(.title)
-                        .foregroundStyle(.white)
-                        .frame(width: 80, height: 80)
-                        .background(viewModel.timerState == .running ? .orange : .green)
-                        .clipShape(Circle())
-                }
+            }
 
-                // Stop button - shows confirmation dialog
-                Button {
-                    showStopConfirmation = true
-                } label: {
-                    Image(systemName: "stop.fill")
-                        .font(.title2)
-                        .foregroundStyle(.white)
-                        .frame(width: 60, height: 60)
-                        .background(.red)
-                        .clipShape(Circle())
+            HStack(spacing: DesignTokens.Spacing.xl) {
+                if viewModel.timerState == .stopped && viewModel.currentPhase == .idle {
+                    // Start button
+                    Button {
+                        Task {
+                            try? await viewModel.startWorkout()
+                        }
+                    } label: {
+                        Label("Iniciar", systemImage: "play.fill")
+                            .font(.title2.bold())
+                            .foregroundStyle(.white)
+                            .frame(width: 200, height: 60)
+                            .background(.green)
+                            .clipShape(Capsule())
+                    }
+                } else {
+                    // Pause/Resume button
+                    Button {
+                        Task {
+                            if viewModel.timerState == .running {
+                                await viewModel.pauseWorkout()
+                            } else {
+                                try? await viewModel.resumeWorkout()
+                            }
+                        }
+                    } label: {
+                        Image(systemName: viewModel.timerState == .running ? "pause.fill" : "play.fill")
+                            .font(.title)
+                            .foregroundStyle(.white)
+                            .frame(width: 80, height: 80)
+                            .background(viewModel.timerState == .running ? .orange : .green)
+                            .clipShape(Circle())
+                    }
+
+                    // Stop button - shows confirmation dialog
+                    Button {
+                        showStopConfirmation = true
+                    } label: {
+                        Image(systemName: "stop.fill")
+                            .font(.title2)
+                            .foregroundStyle(.white)
+                            .frame(width: 60, height: 60)
+                            .background(.red)
+                            .clipShape(Circle())
+                    }
                 }
             }
         }
