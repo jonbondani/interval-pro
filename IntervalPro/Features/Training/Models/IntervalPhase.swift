@@ -67,6 +67,17 @@ enum IntervalPhase: String, Codable, Equatable, CaseIterable {
         }
     }
 
+    var emoji: String {
+        switch self {
+        case .idle: return "⏳"
+        case .warmup: return "🔥"
+        case .work: return "🏃"
+        case .rest: return "🚶"
+        case .cooldown: return "❄️"
+        case .complete: return "✅"
+        }
+    }
+
     var isActive: Bool {
         switch self {
         case .idle, .complete:

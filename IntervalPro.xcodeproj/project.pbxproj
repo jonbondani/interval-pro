@@ -3,10 +3,11 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 63;
+	objectVersion = 70;
 	objects = {
 
 /* Begin PBXBuildFile section */
+		001022C184E96C95D2A0DF61 /* TrainingViewComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28FCD90F269B1892E997E6A9 /* TrainingViewComponents.swift */; };
 		01398D5A63E6986CCCB76140 /* MusicControllerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 249640C552553E78352C4A8C /* MusicControllerTests.swift */; };
 		044E450E93781BA4CAD558DB /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 3793BF8338DD94813C54790A /* Assets.xcassets */; };
 		04725C6D45291F30945AC65C /* TrainingSessionEntity.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7C35E66F17A4C932BD13B5E /* TrainingSessionEntity.swift */; };
@@ -23,9 +24,13 @@
 		3470999E676121CA4DDD9B6B /* HealthKitManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A163BA993DFDDECE416BC25D /* HealthKitManager.swift */; };
 		35660C3256DC50D81AE8BBA5 /* PlanRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2755FF000ECA206B9BFE87A5 /* PlanRepository.swift */; };
 		372B6D6CBF41EF330B0A6D15 /* Logger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4104BCE247D8EBBC7182EDE6 /* Logger.swift */; };
+		3CC72BA32F55C58500E60F51 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3CC72BA22F55C58500E60F51 /* WidgetKit.framework */; };
+		3CC72BA52F55C58500E60F51 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3CC72BA42F55C58500E60F51 /* SwiftUI.framework */; };
+		3CC72BB42F55C58600E60F51 /* IntervalProWidgetsExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 3CC72BA02F55C58500E60F51 /* IntervalProWidgetsExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		4025EEB471EB49460FA453FD /* HRDataService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E544BA9CE546C0A5F81875F /* HRDataService.swift */; };
 		5654AAB3E97B1AC32AFE2F5A /* IntervalTimer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 510954188DCCA13FBD7018BD /* IntervalTimer.swift */; };
 		5EC624A3B280DBD9772996A0 /* UnifiedMusicController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A361CE0CB38827B877DA3260 /* UnifiedMusicController.swift */; };
+		666B03C2619D2DDC3222D02B /* WalkingWorkoutViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC95D92361AA39AF8045B0EC /* WalkingWorkoutViews.swift */; };
 		6AC0A9EE8A6BC2E42D826666 /* TrainingSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4731CE746AA497CC5E744D36 /* TrainingSession.swift */; };
 		7D0A465F51D564B7E543343E /* HealthKitManaging.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E395BEB65C9738300D85159 /* HealthKitManaging.swift */; };
 		8016FE0E6CBB83A5D90D15B9 /* HeartRateZone.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20EB030802C151727590CDDE /* HeartRateZone.swift */; };
@@ -37,8 +42,10 @@
 		9E4F484D5220DEA610389DDB /* NavigationRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30004534F86BB3A1F318488E /* NavigationRouter.swift */; };
 		A2A31391CF6A80FDD8AF1BEA /* SpotifyController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20885D7FA796B0BE6A4D137F /* SpotifyController.swift */; };
 		AD1A96C3E57DCFAF527E561B /* HealthKitPermissionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C93E6D56D8208CC9497EF06D /* HealthKitPermissionView.swift */; };
+		APPVERBUILD01A2B3C4D5E6F7 /* AppVersion.swift in Sources */ = {isa = PBXBuildFile; fileRef = APPVERSION01A2B3C4D5E6F7G /* AppVersion.swift */; };
 		C513EA696C39004DAC15823D /* TrainingPlanTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FCF906936E3C03C5E1F12C3 /* TrainingPlanTests.swift */; };
 		CCBB05216BE5F2ADF950770B /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 107490037506F1E374E66E45 /* AppState.swift */; };
+		COACHBUILD01A2B3C4D5E6F7G /* CoachingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = COACHING01A2B3C4D5E6F7G8H /* CoachingService.swift */; };
 		D51015F3F0B559E67F9F7721 /* IntervalPro.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = 712E8059C71736462123D7FB /* IntervalPro.xcdatamodeld */; };
 		D756ADA306A26AE0BE8B4D1B /* MiniPlayerViewTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5AE639A9C67394EF57AFF84 /* MiniPlayerViewTests.swift */; };
 		D8B879A26868B7CC451548F2 /* TimeInterval+Formatting.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3BC6F1079399CA19E2DDA2D2 /* TimeInterval+Formatting.swift */; };
@@ -53,14 +60,19 @@
 		F68A72F53F210DAF29133593 /* HeartRateZoneTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF6368C74FCAADA72956830B /* HeartRateZoneTests.swift */; };
 		FA4A1E1E6117B79A5F47CEA7 /* IntervalPhase.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D339D1298DF192A08A3F335 /* IntervalPhase.swift */; };
 		FA5CEBAD52D5267BC2C406A6 /* SessionRepositoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34EBF75ECD44EB7FB28461A4 /* SessionRepositoryTests.swift */; };
+		LIVEACT01A2B3C4D5E6F7G8J /* TrainingActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = LIVEACT01A2B3C4D5E6F7G8I /* TrainingActivityAttributes.swift */; };
 		PEDBUILD01A2B3C4D5E6F7G8 /* PedometerService.swift in Sources */ = {isa = PBXBuildFile; fileRef = PEDOMETER01A2B3C4D5E6F7G8 /* PedometerService.swift */; };
-		COACHBUILD01A2B3C4D5E6F7G /* CoachingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = COACHING01A2B3C4D5E6F7G8H /* CoachingService.swift */; };
-		APPVERBUILD01A2B3C4D5E6F7 /* AppVersion.swift in Sources */ = {isa = PBXBuildFile; fileRef = APPVERSION01A2B3C4D5E6F7G /* AppVersion.swift */; };
-		666B03C2619D2DDC3222D02B /* WalkingWorkoutViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC95D92361AA39AF8045B0EC /* WalkingWorkoutViews.swift */; };
-		001022C184E96C95D2A0DF61 /* TrainingViewComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28FCD90F269B1892E997E6A9 /* TrainingViewComponents.swift */; };
+		PLANEDITOR01A2B3C4D5E6F7B /* PlanEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = PLANEDITOR01A2B3C4D5E6F7A /* PlanEditorView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		3CC72BB22F55C58600E60F51 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = D0F765E32F1FF9BB00EAFAFE /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 3CC72B9F2F55C58500E60F51;
+			remoteInfo = IntervalProWidgetsExtension;
+		};
 		6E0B979541CB262AA66F725C /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = D0F765E32F1FF9BB00EAFAFE /* Project object */;
@@ -69,6 +81,20 @@
 			remoteInfo = IntervalPro;
 		};
 /* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		3CC72BB52F55C58600E60F51 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				3CC72BB42F55C58600E60F51 /* IntervalProWidgetsExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		024660C9E5F49D9EC89F394D /* CoreDataStack.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreDataStack.swift; sourceTree = "<group>"; };
@@ -83,11 +109,15 @@
 		2362D681C8E09F2E1CA53A6B /* MusicControllerProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MusicControllerProtocol.swift; sourceTree = "<group>"; };
 		249640C552553E78352C4A8C /* MusicControllerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MusicControllerTests.swift; sourceTree = "<group>"; };
 		2755FF000ECA206B9BFE87A5 /* PlanRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanRepository.swift; sourceTree = "<group>"; };
+		28FCD90F269B1892E997E6A9 /* TrainingViewComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingViewComponents.swift; sourceTree = "<group>"; };
 		30004534F86BB3A1F318488E /* NavigationRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavigationRouter.swift; sourceTree = "<group>"; };
 		304136ED54EAE913E5D94B94 /* GarminManaging.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GarminManaging.swift; sourceTree = "<group>"; };
 		34EBF75ECD44EB7FB28461A4 /* SessionRepositoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionRepositoryTests.swift; sourceTree = "<group>"; };
 		3793BF8338DD94813C54790A /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		3BC6F1079399CA19E2DDA2D2 /* TimeInterval+Formatting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "TimeInterval+Formatting.swift"; sourceTree = "<group>"; };
+		3CC72BA02F55C58500E60F51 /* IntervalProWidgetsExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = IntervalProWidgetsExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		3CC72BA22F55C58500E60F51 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		3CC72BA42F55C58500E60F51 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 		3DB33813D30141D0B823E0FD /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		3E395BEB65C9738300D85159 /* HealthKitManaging.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitManaging.swift; sourceTree = "<group>"; };
 		3F3029572DA77726B19D59DA /* AudioEngineProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioEngineProtocol.swift; sourceTree = "<group>"; };
@@ -107,26 +137,53 @@
 		A163BA993DFDDECE416BC25D /* HealthKitManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitManager.swift; sourceTree = "<group>"; };
 		A361CE0CB38827B877DA3260 /* UnifiedMusicController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnifiedMusicController.swift; sourceTree = "<group>"; };
 		AF6368C74FCAADA72956830B /* HeartRateZoneTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeartRateZoneTests.swift; sourceTree = "<group>"; };
+		APPVERSION01A2B3C4D5E6F7G /* AppVersion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppVersion.swift; sourceTree = "<group>"; };
 		B19F35FC55245BCDF716DEBF /* SessionRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionRepository.swift; sourceTree = "<group>"; };
 		B9778DEC59D58BAD7B91FAA3 /* GarminManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GarminManagerTests.swift; sourceTree = "<group>"; };
 		B9A0830FF31C677E7EDD4794 /* MetronomeEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetronomeEngine.swift; sourceTree = "<group>"; };
 		BEC6C1A2143CC0FD73A5F635 /* GarminPairingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GarminPairingView.swift; sourceTree = "<group>"; };
 		C5AE639A9C67394EF57AFF84 /* MiniPlayerViewTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MiniPlayerViewTests.swift; sourceTree = "<group>"; };
 		C93E6D56D8208CC9497EF06D /* HealthKitPermissionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitPermissionView.swift; sourceTree = "<group>"; };
+		COACHING01A2B3C4D5E6F7G8H /* CoachingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoachingService.swift; sourceTree = "<group>"; };
 		D7A690A067B433D35DD8C235 /* HRDataServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HRDataServiceTests.swift; sourceTree = "<group>"; };
 		D7C35E66F17A4C932BD13B5E /* TrainingSessionEntity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingSessionEntity.swift; sourceTree = "<group>"; };
+		DC95D92361AA39AF8045B0EC /* WalkingWorkoutViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WalkingWorkoutViews.swift; sourceTree = "<group>"; };
 		E84DA2658ED0D67641D7DDFE /* TrainingViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingViewModel.swift; sourceTree = "<group>"; };
 		EAD96F2C332CA6CBFDF57A85 /* IntervalProApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntervalProApp.swift; sourceTree = "<group>"; };
 		EC695D4FBC5895802B813ACB /* TrainingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingView.swift; sourceTree = "<group>"; };
 		F97A12E9CD1CA59B90C0A4B7 /* HealthKitManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitManagerTests.swift; sourceTree = "<group>"; };
-		F9CAE8774F13B487213EF209 /* IntervalProTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = IntervalProTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		F9CAE8774F13B487213EF209 /* IntervalProTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = IntervalProTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		FD6CD68DC235FFE45481FD83 /* IntervalPro.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = IntervalPro.entitlements; sourceTree = "<group>"; };
+		LIVEACT01A2B3C4D5E6F7G8I /* TrainingActivityAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingActivityAttributes.swift; sourceTree = "<group>"; };
 		PEDOMETER01A2B3C4D5E6F7G8 /* PedometerService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PedometerService.swift; sourceTree = "<group>"; };
-		COACHING01A2B3C4D5E6F7G8H /* CoachingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoachingService.swift; sourceTree = "<group>"; };
-		APPVERSION01A2B3C4D5E6F7G /* AppVersion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppVersion.swift; sourceTree = "<group>"; };
-		DC95D92361AA39AF8045B0EC /* WalkingWorkoutViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WalkingWorkoutViews.swift; sourceTree = "<group>"; };
-		28FCD90F269B1892E997E6A9 /* TrainingViewComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingViewComponents.swift; sourceTree = "<group>"; };
+		PLANEDITOR01A2B3C4D5E6F7A /* PlanEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanEditorView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		3CC72BB82F55C58600E60F51 /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 3CC72B9F2F55C58500E60F51 /* IntervalProWidgetsExtension */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		3CC72BA62F55C58500E60F51 /* IntervalProWidgets */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (3CC72BB82F55C58600E60F51 /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = IntervalProWidgets; sourceTree = "<group>"; };
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		3CC72B9D2F55C58500E60F51 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				3CC72BA52F55C58500E60F51 /* SwiftUI.framework in Frameworks */,
+				3CC72BA32F55C58500E60F51 /* WidgetKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
 		10D27A8A492DDC1B4C7A56AD /* Views */ = {
@@ -134,8 +191,8 @@
 			children = (
 				467EB985AE868868A2547839 /* MiniPlayerView.swift */,
 				EC695D4FBC5895802B813ACB /* TrainingView.swift */,
-						28FCD90F269B1892E997E6A9 /* TrainingViewComponents.swift */,
-						DC95D92361AA39AF8045B0EC /* WalkingWorkoutViews.swift */,
+				28FCD90F269B1892E997E6A9 /* TrainingViewComponents.swift */,
+				DC95D92361AA39AF8045B0EC /* WalkingWorkoutViews.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -203,6 +260,7 @@
 				15D8F24B4B2745CA57B44541 /* Audio */,
 				E421A316EC0B5D3690495AFA /* Bluetooth */,
 				6467B44D82E927B6D623BFA4 /* Health */,
+				LIVEACT01A2B3C4D5E6F7G8H /* LiveActivity */,
 				MOTION01A2B3C4D5E6F7G8H9 /* Motion */,
 				40D4E790BCD9CC7A8E8ECF13 /* Persistence */,
 				364625CF5FE1CCB0A455E294 /* Timer */,
@@ -252,6 +310,15 @@
 			path = Tests;
 			sourceTree = "<group>";
 		};
+		3CC72BA12F55C58500E60F51 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				3CC72BA22F55C58500E60F51 /* WidgetKit.framework */,
+				3CC72BA42F55C58500E60F51 /* SwiftUI.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		40D4E790BCD9CC7A8E8ECF13 /* Persistence */ = {
 			isa = PBXGroup;
 			children = (
@@ -269,6 +336,8 @@
 			children = (
 				2F081350D954F3D2BC88F01D /* IntervalPro */,
 				F6B4CF48554FAE2F2A0D71AC /* UnitTests */,
+				3CC72BA62F55C58500E60F51 /* IntervalProWidgets */,
+				3CC72BA12F55C58500E60F51 /* Frameworks */,
 				644ADCF89E88993CB7C56BE3 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -285,6 +354,7 @@
 			children = (
 				8D4DF47E1D5DB59ED3932ACF /* IntervalPro.app */,
 				F9CAE8774F13B487213EF209 /* IntervalProTests.xctest */,
+				3CC72BA02F55C58500E60F51 /* IntervalProWidgetsExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -297,22 +367,6 @@
 				7E544BA9CE546C0A5F81875F /* HRDataService.swift */,
 			);
 			path = Health;
-			sourceTree = "<group>";
-		};
-		MOTION01A2B3C4D5E6F7G8H9 /* Motion */ = {
-			isa = PBXGroup;
-			children = (
-				PEDOMETER01A2B3C4D5E6F7G8 /* PedometerService.swift */,
-			);
-			path = Motion;
-			sourceTree = "<group>";
-		};
-		TRAINING01A2B3C4D5E6F7G8H /* Training */ = {
-			isa = PBXGroup;
-			children = (
-				COACHING01A2B3C4D5E6F7G8H /* CoachingService.swift */,
-			);
-			path = Training;
 			sourceTree = "<group>";
 		};
 		72815156B95FCAA1A1EDFC98 /* Views */ = {
@@ -369,6 +423,7 @@
 		94BFB2146A7BEDA9602FFA1D /* Plans */ = {
 			isa = PBXGroup;
 			children = (
+				PLANEDITOR01A2B3C4D5E6F7A /* PlanEditorView.swift */,
 				35E962E48C0862376C482DB4 /* Models */,
 				B8082789C9BEC42DA61213E4 /* ViewModels */,
 				7DAA772BA6DA02F326EA040D /* Views */,
@@ -495,6 +550,30 @@
 			path = UnitTests;
 			sourceTree = "<group>";
 		};
+		LIVEACT01A2B3C4D5E6F7G8H /* LiveActivity */ = {
+			isa = PBXGroup;
+			children = (
+				LIVEACT01A2B3C4D5E6F7G8I /* TrainingActivityAttributes.swift */,
+			);
+			path = LiveActivity;
+			sourceTree = "<group>";
+		};
+		MOTION01A2B3C4D5E6F7G8H9 /* Motion */ = {
+			isa = PBXGroup;
+			children = (
+				PEDOMETER01A2B3C4D5E6F7G8 /* PedometerService.swift */,
+			);
+			path = Motion;
+			sourceTree = "<group>";
+		};
+		TRAINING01A2B3C4D5E6F7G8H /* Training */ = {
+			isa = PBXGroup;
+			children = (
+				COACHING01A2B3C4D5E6F7G8H /* CoachingService.swift */,
+			);
+			path = Training;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -505,10 +584,12 @@
 				3EDB62B5D754BE6808E22FA3 /* SwiftLint */,
 				4C46DED8D4614E5020532418 /* Sources */,
 				7E4EC11250E3ADAE9B456E7C /* Resources */,
+				3CC72BB52F55C58600E60F51 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				3CC72BB32F55C58600E60F51 /* PBXTargetDependency */,
 			);
 			name = IntervalPro;
 			packageProductDependencies = (
@@ -535,6 +616,28 @@
 			productReference = F9CAE8774F13B487213EF209 /* IntervalProTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
+		3CC72B9F2F55C58500E60F51 /* IntervalProWidgetsExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 3CC72BB92F55C58600E60F51 /* Build configuration list for PBXNativeTarget "IntervalProWidgetsExtension" */;
+			buildPhases = (
+				3CC72B9C2F55C58500E60F51 /* Sources */,
+				3CC72B9D2F55C58500E60F51 /* Frameworks */,
+				3CC72B9E2F55C58500E60F51 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				3CC72BA62F55C58500E60F51 /* IntervalProWidgets */,
+			);
+			name = IntervalProWidgetsExtension;
+			packageProductDependencies = (
+			);
+			productName = IntervalProWidgetsExtension;
+			productReference = 3CC72BA02F55C58500E60F51 /* IntervalProWidgetsExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -542,7 +645,8 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
-				LastUpgradeCheck = 1500;
+				LastSwiftUpdateCheck = 2620;
+				LastUpgradeCheck = 2620;
 				TargetAttributes = {
 					1E64544C0A165CA2F63403F0 = {
 						ProvisioningStyle = Automatic;
@@ -550,6 +654,9 @@
 					3B982C8B6A2030949CAD2A85 = {
 						DevelopmentTeam = "";
 						ProvisioningStyle = Automatic;
+					};
+					3CC72B9F2F55C58500E60F51 = {
+						CreatedOnToolsVersion = 26.2;
 					};
 				};
 			};
@@ -568,11 +675,19 @@
 			targets = (
 				1E64544C0A165CA2F63403F0 /* IntervalPro */,
 				3B982C8B6A2030949CAD2A85 /* IntervalProTests */,
+				3CC72B9F2F55C58500E60F51 /* IntervalProWidgetsExtension */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		3CC72B9E2F55C58500E60F51 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		7E4EC11250E3ADAE9B456E7C /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -624,6 +739,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		3CC72B9C2F55C58500E60F51 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		4C46DED8D4614E5020532418 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -655,6 +777,8 @@
 				9E4F484D5220DEA610389DDB /* NavigationRouter.swift in Sources */,
 				PEDBUILD01A2B3C4D5E6F7G8 /* PedometerService.swift in Sources */,
 				35660C3256DC50D81AE8BBA5 /* PlanRepository.swift in Sources */,
+				PLANEDITOR01A2B3C4D5E6F7B /* PlanEditorView.swift in Sources */,
+				LIVEACT01A2B3C4D5E6F7G8J /* TrainingActivityAttributes.swift in Sources */,
 				13441EFF8E3F1E72887D4353 /* SessionRepository.swift in Sources */,
 				A2A31391CF6A80FDD8AF1BEA /* SpotifyController.swift in Sources */,
 				D8B879A26868B7CC451548F2 /* TimeInterval+Formatting.swift in Sources */,
@@ -673,6 +797,11 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		3CC72BB32F55C58600E60F51 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 3CC72B9F2F55C58500E60F51 /* IntervalProWidgetsExtension */;
+			targetProxy = 3CC72BB22F55C58600E60F51 /* PBXContainerItemProxy */;
+		};
 		F05D0118859CD41E4BBC693D /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 1E64544C0A165CA2F63403F0 /* IntervalPro */;
@@ -715,6 +844,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
@@ -767,9 +897,88 @@
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_VERSION = 5.9;
+			};
+			name = Release;
+		};
+		3CC72BB62F55C58600E60F51 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = SMU9256WVS;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = IntervalProWidgets/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = IntervalProWidgets;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.jbd.intervalpro.app.IntervalProWidgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		3CC72BB72F55C58600E60F51 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = SMU9256WVS;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = IntervalProWidgets/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = IntervalProWidgets;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.jbd.intervalpro.app.IntervalProWidgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
 			};
 			name = Release;
 		};
@@ -840,6 +1049,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
@@ -899,6 +1109,7 @@
 				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.9;
@@ -913,6 +1124,15 @@
 			buildConfigurations = (
 				6FE7391A128D9ACBBD3FF1C3 /* Debug */,
 				72B6FD801FAF88CCEAF03CCE /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		3CC72BB92F55C58600E60F51 /* Build configuration list for PBXNativeTarget "IntervalProWidgetsExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				3CC72BB62F55C58600E60F51 /* Debug */,
+				3CC72BB72F55C58600E60F51 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
