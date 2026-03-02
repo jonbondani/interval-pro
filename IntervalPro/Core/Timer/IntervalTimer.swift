@@ -33,11 +33,16 @@ final class IntervalTimer: ObservableObject {
     var onSeriesComplete: ((Int) -> Void)?
     var onWorkoutComplete: (() -> Void)?
     var onTick: ((TimeInterval) -> Void)?
-    var onTimeWarning: ((Int) -> Void)?  // Seconds remaining
+    var onTimeWarning: ((Int) -> Void)?   // Seconds remaining (fixed countdowns)
+    var onMilestone: ((MilestoneKind) -> Void)?  // Equal-division phase milestones
 
     // MARK: - Time Warning Thresholds
     private let timeWarnings: Set<Int> = [30, 10, 5, 3, 2, 1]
     private var announcedWarnings: Set<Int> = []
+
+    // MARK: - Phase Milestones (computed per phase)
+    private var dynamicMilestones: [(remaining: Int, kind: MilestoneKind)] = []
+    private var announcedMilestones: Set<Int> = []
 
     // MARK: - Computed Properties
     var isRunning: Bool {
@@ -161,6 +166,8 @@ final class IntervalTimer: ObservableObject {
         totalElapsedTime = 0
         currentPhaseDuration = 0
         announcedWarnings.removeAll()
+        dynamicMilestones = []
+        announcedMilestones = []
 
         Log.training.debug("Timer reset")
     }
@@ -216,10 +223,39 @@ final class IntervalTimer: ObservableObject {
         phaseElapsedTime = 0
         phaseRemainingTime = duration
         announcedWarnings.removeAll()
+        computeMilestones(for: duration)
 
         onPhaseChange?(previousPhase, phase)
 
         Log.training.info("Phase: \(previousPhase.rawValue) → \(phase.rawValue), duration: \(duration.formattedMinutesSeconds)")
+    }
+
+    /// Divides the phase duration into 3 equal parts and registers milestone announcements.
+    /// Skips milestones that fall within 3s of existing fixed countdowns to avoid overlap.
+    private func computeMilestones(for duration: TimeInterval) {
+        dynamicMilestones = []
+        announcedMilestones = []
+        guard duration >= 60 else { return }
+
+        let third = duration / 3
+
+        // 1/3 elapsed: 2/3 remaining
+        let twoThirdsRem = Int((2 * third).rounded())
+        if !timeWarnings.contains(twoThirdsRem) {
+            dynamicMilestones.append((remaining: twoThirdsRem, kind: .firstThird(remaining: 2 * third)))
+        }
+
+        // 2/3 elapsed: last third begins
+        let oneThirdRem = Int(third.rounded())
+        if !timeWarnings.contains(oneThirdRem) {
+            dynamicMilestones.append((remaining: oneThirdRem, kind: .lastThird(remaining: third)))
+        }
+
+        // Halfway through last third (D/6 remaining)
+        let halfLastRem = Int((third / 2).rounded())
+        if halfLastRem > 12, !timeWarnings.contains(halfLastRem), halfLastRem != oneThirdRem {
+            dynamicMilestones.append((remaining: halfLastRem, kind: .halfLastThird(remaining: third / 2)))
+        }
     }
 
     private func handlePhaseComplete() {
@@ -334,6 +370,13 @@ final class IntervalTimer: ObservableObject {
                 onTimeWarning?(warning)
             }
         }
+
+        for milestone in dynamicMilestones {
+            if secondsRemaining == milestone.remaining && !announcedMilestones.contains(milestone.remaining) {
+                announcedMilestones.insert(milestone.remaining)
+                onMilestone?(milestone.kind)
+            }
+        }
     }
 
     // MARK: - Skip Functions
@@ -372,6 +415,13 @@ final class IntervalTimer: ObservableObject {
 
         Log.training.debug("Subtracted \(seconds)s from current phase")
     }
+}
+
+// MARK: - Milestone Kind
+enum MilestoneKind {
+    case firstThird(remaining: TimeInterval)    // 1/3 elapsed, 2/3 remaining
+    case lastThird(remaining: TimeInterval)     // 2/3 elapsed, last third begins
+    case halfLastThird(remaining: TimeInterval) // halfway through last third
 }
 
 // MARK: - Interval Timer State Snapshot

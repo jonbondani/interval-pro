@@ -85,6 +85,35 @@ struct TrainingSession: Identifiable, Codable, Equatable {
         return formatter.string(from: NSNumber(value: totalSteps)) ?? "\(totalSteps)"
     }
 
+    /// Average cadence (SPM) across all work intervals with data
+    var avgCadence: Int {
+        let workIntervals = intervals.filter { $0.phase == .work && $0.avgCadence > 0 }
+        guard !workIntervals.isEmpty else { return 0 }
+        return workIntervals.map(\.avgCadence).reduce(0, +) / workIntervals.count
+    }
+
+    /// Maximum cadence (SPM) recorded across all intervals
+    var maxCadence: Int {
+        intervals.map(\.maxCadence).max() ?? 0
+    }
+
+    /// Training Effect on a 0–5 scale (Garmin-style estimate based on session score)
+    var trainingEffect: Double {
+        guard score > 0, completedIntervals > 0 else { return 0 }
+        return min(5.0, score / 20.0)
+    }
+
+    var trainingEffectLabel: String {
+        switch trainingEffect {
+        case 0..<1: return "Mínimo"
+        case 1..<2: return "Mantenimiento"
+        case 2..<3: return "Mejora aeróbica"
+        case 3..<4: return "Alta carga"
+        case 4...5: return "Muy alta carga"
+        default: return "--"
+        }
+    }
+
     // MARK: - Init
     init(
         id: UUID = UUID(),
@@ -136,6 +165,8 @@ struct IntervalRecord: Identifiable, Equatable {
     var minHR: Int
     var distance: Double  // meters
     var avgPace: Double  // seconds per km
+    var avgCadence: Int  // SPM
+    var maxCadence: Int  // SPM
     var timeInZone: TimeInterval
     var hrSamples: [HRSample]
 
@@ -185,6 +216,8 @@ struct IntervalRecord: Identifiable, Equatable {
         minHR: Int = 0,
         distance: Double = 0,
         avgPace: Double = 0,
+        avgCadence: Int = 0,
+        maxCadence: Int = 0,
         timeInZone: TimeInterval = 0,
         hrSamples: [HRSample] = []
     ) {
@@ -201,6 +234,8 @@ struct IntervalRecord: Identifiable, Equatable {
         self.minHR = minHR
         self.distance = distance
         self.avgPace = avgPace
+        self.avgCadence = avgCadence
+        self.maxCadence = maxCadence
         self.timeInZone = timeInZone
         self.hrSamples = hrSamples
     }
@@ -211,7 +246,7 @@ extension IntervalRecord: Codable {
     enum CodingKeys: String, CodingKey {
         case id, phase, seriesNumber, blockNumber, targetCadence
         case startTime, startDistance
-        case duration, avgHR, maxHR, minHR, distance, avgPace, timeInZone, hrSamples
+        case duration, avgHR, maxHR, minHR, distance, avgPace, avgCadence, maxCadence, timeInZone, hrSamples
     }
 
     init(from decoder: Decoder) throws {
@@ -230,6 +265,8 @@ extension IntervalRecord: Codable {
         minHR = try c.decode(Int.self, forKey: .minHR)
         distance = try c.decode(Double.self, forKey: .distance)
         avgPace = try c.decode(Double.self, forKey: .avgPace)
+        avgCadence = (try? c.decode(Int.self, forKey: .avgCadence)) ?? 0
+        maxCadence = (try? c.decode(Int.self, forKey: .maxCadence)) ?? 0
         timeInZone = try c.decode(TimeInterval.self, forKey: .timeInZone)
         hrSamples = (try? c.decode([HRSample].self, forKey: .hrSamples)) ?? []
     }
@@ -249,6 +286,8 @@ extension IntervalRecord: Codable {
         try c.encode(minHR, forKey: .minHR)
         try c.encode(distance, forKey: .distance)
         try c.encode(avgPace, forKey: .avgPace)
+        try c.encode(avgCadence, forKey: .avgCadence)
+        try c.encode(maxCadence, forKey: .maxCadence)
         try c.encode(timeInZone, forKey: .timeInZone)
         try c.encode(hrSamples, forKey: .hrSamples)
     }

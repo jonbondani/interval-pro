@@ -313,10 +313,13 @@ final class MetronomeEngine: NSObject, ObservableObject, AudioEngineProtocol {
         guard isVoiceEnabled else { return }
 
         await MainActor.run {
+            // Duck the metronome clicks during speech so voice is clearly audible
+            playerNode?.volume = currentVolume * 0.15
+
             let utterance = AVSpeechUtterance(string: message)
             utterance.voice = AVSpeechSynthesisVoice(language: currentLanguage)
-            utterance.rate = AVSpeechUtteranceDefaultSpeechRate * 1.1  // Slightly faster
-            utterance.volume = voiceVolume
+            utterance.rate = AVSpeechUtteranceDefaultSpeechRate * 1.1
+            utterance.volume = 1.0  // Max TTS volume; overall level is controlled by system
             utterance.pitchMultiplier = 1.0
 
             speechSynthesizer?.speak(utterance)
@@ -363,6 +366,7 @@ final class MetronomeEngine: NSObject, ObservableObject, AudioEngineProtocol {
 
     func stopVoice() {
         speechSynthesizer?.stopSpeaking(at: .immediate)
+        playerNode?.volume = currentVolume  // Restore if stopped mid-speech
     }
 
     private var currentLanguage: String {
@@ -374,12 +378,12 @@ final class MetronomeEngine: NSObject, ObservableObject, AudioEngineProtocol {
 
 // MARK: - AVSpeechSynthesizerDelegate
 extension MetronomeEngine: AVSpeechSynthesizerDelegate {
-    func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didStart utterance: AVSpeechUtterance) {
-        // Music is automatically ducked due to .duckOthers option
+    func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance) {
+        playerNode?.volume = currentVolume
     }
 
-    func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance) {
-        // Music volume restored automatically
+    func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didCancel utterance: AVSpeechUtterance) {
+        playerNode?.volume = currentVolume
     }
 }
 
