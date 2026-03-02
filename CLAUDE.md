@@ -216,8 +216,10 @@ if currentCadence >= 165 && currentCadence <= 175 {
 | **SwiftUI** | UI layer | iOS 16+, no UIKit |
 | **CoreBluetooth** | Garmin connection | Standard BLE, no Garmin SDK needed |
 | **AVFoundation** | Metronome audio | AVAudioSession mixing |
-| **CoreData** | Local persistence | Workout history storage |
+| **CoreData** | Local persistence | Workout history + plan storage |
 | **Swift Charts** | Visualizations | Progress trends |
+| **ActivityKit** | Live Activity | Lock screen + Dynamic Island during training |
+| **WidgetKit** | Widget extension | IntervalProWidgets target |
 
 ### What We DON'T Need
 
@@ -246,9 +248,10 @@ IntervalPro/
 ├── Features/
 │   ├── Training/
 │   │   ├── Views/          # TrainingView, CadenceZoneBar
-│   │   ├── ViewModels/     # TrainingViewModel
-│   │   └── Models/         # TrainingPlan, HeartRateZone (cadence zone)
+│   │   ├── ViewModels/     # TrainingViewModel (haptics, Live Activity)
+│   │   └── Models/         # TrainingPlan, HeartRateZone (cadence zone), IntervalPhase
 │   ├── Plans/
+│   │   └── PlanEditorView.swift    # CRUD editor de planes
 │   ├── Progress/
 │   └── Settings/
 ├── Core/
@@ -257,14 +260,22 @@ IntervalPro/
 │   ├── Health/
 │   │   └── HRDataService.swift     # Unified cadence + HR stream
 │   ├── Audio/
-│   │   └── MetronomeEngine.swift
+│   │   └── MetronomeEngine.swift   # Duck metronome during voice
+│   ├── LiveActivity/
+│   │   └── TrainingActivityAttributes.swift  # Shared con widget extension
 │   └── Persistence/
-│       └── CoreDataStack.swift     # Local workout storage
+│       ├── CoreDataStack.swift
+│       └── PlanRepository.swift    # CRUD planes con CoreData
 ├── Shared/
 │   ├── Extensions/
 │   ├── Components/
 │   └── Utilities/
 └── Tests/
+
+IntervalProWidgets/               # Widget Extension target
+├── IntervalProWidgetsBundle.swift # @main entry point
+├── TrainingLiveActivity.swift     # Lock screen + Dynamic Island
+└── TrainingActivityAttributes.swift  # Copia para el extension target
 ```
 
 ---
@@ -390,13 +401,18 @@ let garminPatterns = ["garmin", "fenix", "forerunner", "hrm", "venu", "instinct"
 |------|---------|
 | `GarminManager.swift` | BLE connection (standard, no SDK) |
 | `HRDataService.swift` | Unified cadence + HR stream, zone tracking |
-| `MetronomeEngine.swift` | Audio playback, voice announcements |
-| `IntervalTimer.swift` | Work/rest phase logic |
-| `TrainingViewModel.swift` | Active session state |
+| `MetronomeEngine.swift` | Audio playback, voice announcements, metronome duck |
+| `IntervalTimer.swift` | Work/rest phase logic + milestone callbacks |
+| `TrainingViewModel.swift` | Active session state, haptics, Live Activity |
 | `TrainingPlan.swift` | Plan configuration |
 | `HeartRateZone.swift` | Cadence zone model (name is legacy) |
 | `CoreDataStack.swift` | Local persistence |
+| `PlanRepository.swift` | CRUD de planes en CoreData |
+| `PlanEditorView.swift` | Formulario crear/editar planes |
+| `TrainingActivityAttributes.swift` | ActivityKit model (en ambos targets) |
+| `TrainingLiveActivity.swift` | Widget lock screen + Dynamic Island |
 | `UnifiedMusicController.swift` | Music detection (no SDK) |
+| `ContentView.swift` | HomeView (plan list CRUD), SessionDetailView, ProgressDashboardView |
 
 ### Data Flow
 
@@ -423,6 +439,7 @@ CoreData (save session locally)
 | CoreBluetooth (Garmin) | ✅ Works | ✅ Works |
 | CoreData (local storage) | ✅ Works | ✅ Works |
 | AVFoundation (audio) | ✅ Works | ✅ Works |
+| ActivityKit (Live Activity) | ✅ Works | ✅ Works |
 | App Store distribution | ❌ No | ✅ Yes |
 | HealthKit | ❌ No | ✅ Yes |
 | TestFlight (beta) | ❌ No | ✅ Yes |
@@ -439,3 +456,4 @@ CoreData (save session locally)
 | 1.1 | 2026-01-29 | Added WorkBlock for progressive workouts |
 | 1.2 | 2026-01-30 | Music integration patterns |
 | 1.3 | 2026-01-31 | **Major update**: Clarified cadence vs HR, removed HealthKit dependency, documented no SDK requirements |
+| 1.4 | 2026-03-02 | Plan editor CRUD, HomeView plan management, haptic feedback, same-block comparison with plan target, IntervalTimer milestones, metronome duck during voice, Live Activity (lock screen + Dynamic Island), widget extension target |
