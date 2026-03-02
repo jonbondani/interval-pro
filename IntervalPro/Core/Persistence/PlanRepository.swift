@@ -27,7 +27,7 @@ final class PlanRepository: PlanRepositoryProtocol, ObservableObject {
 
     // MARK: - Save
     func save(_ plan: TrainingPlan) async throws {
-        // Check custom plan limit (free tier)
+        // Check custom plan limit only for brand-new non-default plans
         if !plan.isDefault {
             let customPlans = try await fetchCustomPlans()
             if customPlans.count >= maxCustomPlans && !customPlans.contains(where: { $0.id == plan.id }) {
@@ -81,11 +81,6 @@ final class PlanRepository: PlanRepositoryProtocol, ObservableObject {
         let entities = try context.fetch(fetchRequest)
 
         if let entity = entities.first {
-            // Don't allow deleting default plans
-            guard !entity.isDefault else {
-                throw PlanRepositoryError.cannotDeleteDefaultPlan
-            }
-
             context.delete(entity)
             try await coreDataStack.save()
             Log.persistence.debug("Plan deleted: \(id)")
@@ -111,14 +106,11 @@ final class PlanRepository: PlanRepositoryProtocol, ObservableObject {
 // MARK: - Errors
 enum PlanRepositoryError: LocalizedError {
     case maxPlansReached
-    case cannotDeleteDefaultPlan
 
     var errorDescription: String? {
         switch self {
         case .maxPlansReached:
-            return "Has alcanzado el límite de planes personalizados. Actualiza a Premium para planes ilimitados."
-        case .cannotDeleteDefaultPlan:
-            return "No puedes eliminar los planes predeterminados."
+            return "Has alcanzado el límite de planes personalizados."
         }
     }
 }

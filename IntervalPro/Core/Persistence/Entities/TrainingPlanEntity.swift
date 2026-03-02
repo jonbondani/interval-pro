@@ -6,24 +6,19 @@ import Foundation
 /// This file provides mapping between the entity and the domain model
 
 extension TrainingPlanEntity {
-    /// Convert Core Data entity to domain model
+    /// Convert Core Data entity to domain model.
+    /// Decodes from the full planData JSON blob first (supports workBlocks, pace, etc.),
+    /// falling back to individual scalar columns for records created before planData existed.
     func toDomainModel() -> TrainingPlan? {
-        guard let id = id,
-              let name = name else {
-            return nil
+        if let data = planData, let plan = try? JSONDecoder().decode(TrainingPlan.self, from: data) {
+            return plan
         }
-
+        guard let id = id, let name = name else { return nil }
         return TrainingPlan(
             id: id,
             name: name,
-            workZone: HeartRateZone(
-                targetBPM: Int(workTargetBPM),
-                toleranceBPM: Int(workToleranceBPM)
-            ),
-            restZone: HeartRateZone(
-                targetBPM: Int(restTargetBPM),
-                toleranceBPM: Int(restToleranceBPM)
-            ),
+            workZone: HeartRateZone(targetBPM: Int(workTargetBPM), toleranceBPM: Int(workToleranceBPM)),
+            restZone: HeartRateZone(targetBPM: Int(restTargetBPM), toleranceBPM: Int(restToleranceBPM)),
             workDuration: workDuration,
             restDuration: restDuration,
             seriesCount: Int(seriesCount),
@@ -34,10 +29,13 @@ extension TrainingPlanEntity {
         )
     }
 
-    /// Update entity from domain model
+    /// Update entity from domain model.
+    /// Stores full plan as JSON (planData) for complete fidelity, plus individual columns for compatibility.
     func update(from plan: TrainingPlan) {
         self.id = plan.id
         self.name = plan.name
+        self.planData = try? JSONEncoder().encode(plan)
+        // Individual columns (kept for backwards compat with old fetch predicates)
         self.workTargetBPM = Int16(plan.workZone.targetBPM)
         self.workToleranceBPM = Int16(plan.workZone.toleranceBPM)
         self.restTargetBPM = Int16(plan.restZone.targetBPM)
@@ -104,6 +102,7 @@ extension TrainingPlanEntity {
 public class TrainingPlanEntity: NSManagedObject {
     @NSManaged public var id: UUID?
     @NSManaged public var name: String?
+    @NSManaged public var planData: Data?  // Full JSON-encoded TrainingPlan (supports workBlocks, pace, etc.)
     @NSManaged public var workTargetBPM: Int16
     @NSManaged public var workToleranceBPM: Int16
     @NSManaged public var restTargetBPM: Int16
