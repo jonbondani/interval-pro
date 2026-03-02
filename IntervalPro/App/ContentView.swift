@@ -51,29 +51,83 @@ struct MainTabView: View {
 // MARK: - Home View
 struct HomeView: View {
     @EnvironmentObject private var navigationRouter: NavigationRouter
-    @State private var selectedPlan: TrainingPlan?
+    @StateObject private var planRepository = PlanRepository()
 
-    private let plans = TrainingPlan.defaultTemplates
+    @State private var selectedPlan: TrainingPlan?
+    @State private var plans: [TrainingPlan] = []
+    @State private var isCreatingPlan = false
+    @State private var editingPlan: TrainingPlan?
+    @State private var planToDelete: TrainingPlan?
 
     var body: some View {
         NavigationStack(path: $navigationRouter.homePath) {
-            ScrollView {
-                VStack(spacing: DesignTokens.Spacing.lg) {
-                    // Header
+            List {
+                // Header
+                Section {
                     headerSection
-
-                    // Quick Start Section
-                    quickStartSection
-
-                    // Training Plans Section
-                    plansSection
-
-                    // Version Footer
-                    versionFooter
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
                 }
-                .padding()
+
+                // Quick Start
+                Section {
+                    quickStartSection
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                }
+
+                // Training Plans
+                Section {
+                    ForEach(plans) { plan in
+                        PlanCard(plan: plan) {
+                            selectedPlan = plan
+                        }
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                        .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 4, trailing: 0))
+                        .swipeActions(edge: .leading, allowsFullSwipe: false) {
+                            Button {
+                                editingPlan = plan
+                            } label: {
+                                Label("Editar", systemImage: "pencil")
+                            }
+                            .tint(.blue)
+                        }
+                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                            Button(role: .destructive) {
+                                planToDelete = plan
+                            } label: {
+                                Label("Eliminar", systemImage: "trash")
+                            }
+                        }
+                    }
+                } header: {
+                    Text("Planes de Entrenamiento")
+                        .font(.title2.bold())
+                        .foregroundStyle(.primary)
+                        .textCase(nil)
+                        .padding(.bottom, DesignTokens.Spacing.xs)
+                }
+
+                // Version footer
+                Section {
+                    versionFooter
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                }
             }
+            .listStyle(.plain)
             .navigationTitle("IntervalPro")
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        isCreatingPlan = true
+                    } label: {
+                        Image(systemName: "plus")
+                    }
+                }
+            }
+            .task { await loadPlans() }
             .navigationDestination(for: NavigationRouter.Destination.self) { destination in
                 switch destination {
                 case .training:
@@ -87,6 +141,35 @@ struct HomeView: View {
             .fullScreenCover(item: $selectedPlan) { plan in
                 TrainingView(plan: plan)
             }
+            .sheet(isPresented: $isCreatingPlan, onDismiss: { Task { await loadPlans() } }) {
+                PlanEditorView(viewModel: PlanEditorViewModel(plan: nil, repository: planRepository))
+            }
+            .sheet(item: $editingPlan, onDismiss: { Task { await loadPlans() } }) { plan in
+                PlanEditorView(viewModel: PlanEditorViewModel(plan: plan, repository: planRepository))
+            }
+            .confirmationDialog(
+                "¿Eliminar \"\(planToDelete?.name ?? "este entreno")\"?",
+                isPresented: Binding(get: { planToDelete != nil }, set: { if !$0 { planToDelete = nil } }),
+                titleVisibility: .visible
+            ) {
+                Button("Eliminar", role: .destructive) {
+                    guard let plan = planToDelete else { return }
+                    planToDelete = nil
+                    Task {
+                        try? await planRepository.delete(id: plan.id)
+                        await loadPlans()
+                    }
+                }
+            }
+        }
+    }
+
+    private func loadPlans() async {
+        do {
+            try await planRepository.seedDefaultPlans()
+            plans = try await planRepository.fetchAll()
+        } catch {
+            plans = TrainingPlan.defaultTemplates
         }
     }
 
@@ -102,6 +185,7 @@ struct HomeView: View {
                 .foregroundStyle(.secondary)
         }
         .padding(.vertical, DesignTokens.Spacing.md)
+        .frame(maxWidth: .infinity)
     }
 
     // MARK: - Quick Start Section
@@ -110,16 +194,17 @@ struct HomeView: View {
             Text("Inicio Rápido")
                 .font(.title2.bold())
 
+            let quickPlan = plans.first { $0.id == TrainingPlan.recommended.id } ?? TrainingPlan.recommended
             Button {
-                selectedPlan = TrainingPlan.recommended
+                selectedPlan = quickPlan
             } label: {
                 HStack {
                     VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
-                        Text("Entrenamiento Recomendado")
+                        Text(quickPlan.name)
                             .font(.headline)
                             .foregroundStyle(.white)
 
-                        Text("Pirámide 160-170-180 BPM")
+                        Text("Pirámide 160-170-180 SPM")
                             .font(.subheadline)
                             .foregroundStyle(.white.opacity(0.8))
                     }
@@ -141,20 +226,6 @@ struct HomeView: View {
                 .clipShape(RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.large))
             }
             .accessibleTapTarget()
-        }
-    }
-
-    // MARK: - Plans Section
-    private var plansSection: some View {
-        VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
-            Text("Planes de Entrenamiento")
-                .font(.title2.bold())
-
-            ForEach(plans) { plan in
-                PlanCard(plan: plan) {
-                    selectedPlan = plan
-                }
-            }
         }
     }
 
@@ -642,6 +713,26 @@ struct SessionDetailView: View {
                 StatItem(label: "FC Máxima", value: "\(session.maxHeartRate) lpm", icon: "heart.circle")
                 StatItem(label: "Tiempo en Zona", value: formatTimeInZone(session.timeInZone), icon: "target")
                 StatItem(label: "% en Zona", value: String(format: "%.0f%%", session.timeInZonePercentage), icon: "percent")
+                if session.avgCadence > 0 {
+                    StatItem(label: "Cadencia Media", value: "\(session.avgCadence) SPM", icon: "figure.run")
+                    StatItem(label: "Cadencia Máx", value: "\(session.maxCadence) SPM", icon: "figure.run.circle")
+                }
+            }
+
+            // Training Effect — full-width row
+            if session.trainingEffect > 0 {
+                HStack(spacing: DesignTokens.Spacing.sm) {
+                    Image(systemName: "bolt.fill")
+                        .foregroundStyle(.yellow)
+                    Text("Efecto de Entrenamiento")
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Text(String(format: "%.1f", session.trainingEffect))
+                        .font(.headline)
+                    Text("· \(session.trainingEffectLabel)")
+                        .foregroundStyle(.secondary)
+                }
+                .font(.subheadline)
             }
         }
         .padding()

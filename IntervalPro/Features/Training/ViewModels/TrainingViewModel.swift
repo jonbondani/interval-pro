@@ -1,6 +1,8 @@
 import SwiftUI
 import Combine
 import HealthKit
+import ActivityKit
+import UIKit
 
 /// Main ViewModel for active training sessions
 /// Coordinates IntervalTimer, HRDataService, MetronomeEngine
@@ -83,6 +85,7 @@ final class TrainingViewModel: ObservableObject {
     var currentSession: TrainingSession?
     var currentIntervalRecord: IntervalRecord?
     var hrSamples: [HRSample] = []
+    var cadenceSamples: [Int] = []
     var intervalRecords: [IntervalRecord] = []
 
     // MARK: - Stats (internal for extension access)
@@ -97,6 +100,9 @@ final class TrainingViewModel: ObservableObject {
 
     // MARK: - Same-Block Announcement Tracking
     private var hasAnnouncedSameBlockImprovement = false
+
+    // MARK: - Live Activity
+    private var liveActivity: Activity<TrainingActivityAttributes>?
 
     // MARK: - Subscriptions
     private var cancellables = Set<AnyCancellable>()
@@ -168,6 +174,16 @@ final class TrainingViewModel: ObservableObject {
         let blockBest = bestPacesPerBlock[blockKey] ?? 0
         if blockBest > 0 { return blockBest }
         return bestPace
+    }
+
+    /// Target pace from the plan for the current block (nil if plan has no pace target).
+    private var currentPlanTargetPace: Double? {
+        guard let plan = plan else { return nil }
+        if let blocks = plan.workBlocks, !blocks.isEmpty,
+           currentBlock > 0, currentBlock <= blocks.count {
+            return blocks[currentBlock - 1].workZone.targetPace
+        }
+        return plan.workZone.targetPace
     }
 
     var formattedSameBlockBestPace: String {
@@ -249,6 +265,13 @@ final class TrainingViewModel: ObservableObject {
 
         hrDataService.$currentPace
             .sink { [weak self] pace in self?.updatePaceComparison(currentPace: pace) }
+            .store(in: &cancellables)
+
+        hrDataService.$currentCadence
+            .sink { [weak self] cadence in
+                guard let self = self, cadence > 0, self.timerState == .running else { return }
+                self.cadenceSamples.append(cadence)
+            }
             .store(in: &cancellables)
     }
 
@@ -336,6 +359,12 @@ final class TrainingViewModel: ObservableObject {
                 await self?.handleTimeWarning(seconds)
             }
         }
+
+        intervalTimer.onMilestone = { [weak self] kind in
+            Task { @MainActor in
+                await self?.handleMilestone(kind)
+            }
+        }
     }
 
     // MARK: - Configuration
@@ -375,6 +404,7 @@ final class TrainingViewModel: ObservableObject {
         maxHeartRate = 0
         minHeartRate = 999
         hrSamples = []
+        cadenceSamples = []
         intervalRecords = []
         totalDistance = 0
 
@@ -433,6 +463,9 @@ final class TrainingViewModel: ObservableObject {
         // Start timer
         intervalTimer.start()
 
+        // Start Live Activity on lock screen
+        startLiveActivity()
+
         // Send Garmin lap marker
         await garminManager.sendLapMarker()
 
@@ -465,6 +498,7 @@ final class TrainingViewModel: ObservableObject {
     }
 
     func stopWorkout() async {
+        await stopLiveActivity()
         intervalTimer.stop()
         audioEngine.stopMetronome()
         audioEngine.stopVoice()  // Stop any ongoing voice announcements
@@ -503,6 +537,16 @@ final class TrainingViewModel: ObservableObject {
         // Start new interval record
         startNewInterval(phase: newPhase)
 
+        // Haptic feedback
+        switch newPhase {
+        case .work:
+            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        case .rest:
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        default:
+            break
+        }
+
         // Update zone tracking
         if let zone = targetZone {
             hrDataService.startZoneTracking(targetZone: zone)
@@ -539,17 +583,23 @@ final class TrainingViewModel: ObservableObject {
         // HealthKit lap event
         try? await healthKitManager.addLapEvent(at: Date())
 
+        // Update Live Activity with new phase
+        updateLiveActivity()
+
         Log.training.info("Phase changed: \(oldPhase.rawValue) → \(newPhase.rawValue)")
     }
 
     private func handleSeriesComplete(_ series: Int) {
         Log.training.debug("Series \(series) complete")
+        UIImpactFeedbackGenerator(style: .heavy).impactOccurred()
 
         // Update comparison with best session
         updateBestSessionComparison()
     }
 
     private func handleWorkoutComplete() async {
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
+        await stopLiveActivity()
         audioEngine.stopMetronome()
         hrDataService.stop()
         hrDataService.disableSimulation()
@@ -577,6 +627,38 @@ final class TrainingViewModel: ObservableObject {
             try? await Task.sleep(for: .milliseconds(300))
             await musicController.restoreFromDuck()
         }
+    }
+
+    private func handleMilestone(_ kind: MilestoneKind) async {
+        guard isVoiceEnabled else { return }
+        let message: String
+        switch kind {
+        case .firstThird(let remaining):
+            let mins = Int(remaining) / 60
+            let secs = Int(remaining) % 60
+            if secs == 0 {
+                let words = ["", "Un minuto", "Dos minutos", "Tres minutos", "Cuatro minutos", "Cinco minutos"]
+                message = mins < words.count ? words[mins] : "\(mins) minutos"
+            } else {
+                message = "Quedan \(mins):\(String(format: "%02d", secs))"
+            }
+        case .lastThird(let remaining):
+            let mins = Int(remaining) / 60
+            let secs = Int(remaining) % 60
+            if secs == 0 && mins > 0 {
+                message = "Último tramo, \(mins == 1 ? "un minuto" : "\(mins) minutos")"
+            } else {
+                message = "Último tramo"
+            }
+        case .halfLastThird(let remaining):
+            let secs = Int(remaining)
+            let words: [Int: String] = [
+                15: "Quince", 20: "Veinte", 25: "Veinticinco",
+                35: "Treinta y cinco", 40: "Cuarenta", 45: "Cuarenta y cinco", 50: "Cincuenta"
+            ]
+            message = (words[secs] ?? "\(secs)") + " segundos"
+        }
+        await audioEngine.announce(message)
     }
 
     private func handleHeartRateUpdate(_ hr: Int) {
@@ -690,8 +772,11 @@ final class TrainingViewModel: ObservableObject {
         } else {
             record.avgPace = currentPace
         }
+        record.avgCadence = cadenceSamples.isEmpty ? 0 : cadenceSamples.reduce(0, +) / cadenceSamples.count
+        record.maxCadence = cadenceSamples.max() ?? 0
         intervalRecords.append(record)
         hrSamples = []
+        cadenceSamples = []
         currentIntervalRecord = nil
 
         // Update in-memory best pace for this block live during training
@@ -767,21 +852,29 @@ final class TrainingViewModel: ObservableObject {
             return
         }
 
-        // Find best pace from all completed work intervals of same block
-        let sameBlockBest = intervalRecords
+        // Find best pace from all completed work intervals of same block (this session)
+        let completedInBlock = intervalRecords
             .filter { $0.phase == .work && $0.blockNumber == currentBlock && $0.avgPace > 0 }
-            .map(\.avgPace)
-            .min()
+        let sameBlockBest = completedInBlock.map(\.avgPace).min()
 
-        guard let best = sameBlockBest else {
+        // Determine baseline: best completed interval OR plan target pace on first interval
+        let baseline: Double
+        let isUsingPlanTarget: Bool
+        if let best = sameBlockBest {
+            baseline = best
+            isUsingPlanTarget = false
+        } else if let target = currentPlanTargetPace, target > 0 {
+            baseline = target  // Use plan target as the goal on the first interval
+            isUsingPlanTarget = true
+        } else {
             bestSameBlockPace = 0
             currentIntervalPaceVsBest = 0
             isAheadOfSameBlockBest = false
             return
         }
 
-        bestSameBlockPace = best
-        currentIntervalPaceVsBest = pace - best  // negative = faster than best
+        bestSameBlockPace = baseline
+        currentIntervalPaceVsBest = pace - baseline  // negative = faster
 
         let wasAhead = isAheadOfSameBlockBest
         isAheadOfSameBlockBest = currentIntervalPaceVsBest < -5  // 5+ sec/km faster
@@ -790,9 +883,63 @@ final class TrainingViewModel: ObservableObject {
         if isAheadOfSameBlockBest && !wasAhead && !hasAnnouncedSameBlockImprovement {
             hasAnnouncedSameBlockImprovement = true
             Task {
-                await audioEngine.announce("¡Vas mejor que en la ronda anterior!")
+                let msg = isUsingPlanTarget
+                    ? "¡Superando el objetivo de ritmo!"
+                    : "¡Vas mejor que en la ronda anterior!"
+                await audioEngine.announce(msg)
             }
         }
+    }
+}
+
+// MARK: - Live Activity
+extension TrainingViewModel {
+    /// Build a content state snapshot from current ViewModel state.
+    private func liveActivityState() -> TrainingActivityAttributes.ContentState {
+        let endDate = Date.now.addingTimeInterval(phaseRemainingTime)
+        let spm: Int
+        if let zone = targetZone {
+            spm = zone.targetBPM
+        } else {
+            spm = plan?.workZone.targetBPM ?? 0
+        }
+        return TrainingActivityAttributes.ContentState(
+            phaseLabel: currentPhase.displayName,
+            phaseEmoji: currentPhase.emoji,
+            seriesNumber: max(currentSeries, 1),
+            totalSeries: totalSeries,
+            phaseEndDate: endDate,
+            targetSPM: spm,
+            currentPaceFormatted: currentPace > 0 ? currentPace.formattedPace : "--:--",
+            blockNumber: max(currentBlock, 1),
+            totalBlocks: max(totalBlocks, 1)
+        )
+    }
+
+    func startLiveActivity() {
+        guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
+        guard let plan = plan else { return }
+        let attrs = TrainingActivityAttributes(planName: plan.name)
+        do {
+            liveActivity = try Activity<TrainingActivityAttributes>.request(
+                attributes: attrs,
+                contentState: liveActivityState(),
+                pushType: nil
+            )
+        } catch {
+            Log.training.warning("Live Activity failed to start: \(error)")
+        }
+    }
+
+    func updateLiveActivity() {
+        guard let activity = liveActivity else { return }
+        let state = liveActivityState()
+        Task { await activity.update(using: state) }
+    }
+
+    func stopLiveActivity() async {
+        await liveActivity?.end(dismissalPolicy: .immediate)
+        liveActivity = nil
     }
 }
 
